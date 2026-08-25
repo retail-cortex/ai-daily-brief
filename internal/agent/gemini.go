@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"ai-news-agent/internal/config"
-	"ai-news-agent/internal/database"
-	"ai-news-agent/internal/security"
+	"ai-daily-brief/internal/config"
+	"ai-daily-brief/internal/database"
+	"ai-daily-brief/internal/security"
 
 	"golang.org/x/oauth2/google"
 	"gorm.io/gorm"

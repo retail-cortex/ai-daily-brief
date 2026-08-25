@@ -32,7 +32,7 @@ func LoadConfig() *Config {
 		AppConfig = &Config{
 			Port:         "3001",
 			CronSchedule: "0 8 * * *",
-			DatabasePath: "data/news_agent.db",
+			DatabasePath: "data/ai_daily_brief.db",
 			Gemini: GeminiConfig{
 				Model:          "gemini-3.7-flash",
 				AuthMode:       "api_key",

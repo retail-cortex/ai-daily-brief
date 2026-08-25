@@ -52,46 +52,46 @@ jobs:
 
       - name: Build and Package for Linux (x86_64 tarball & debian package)
         run: |
-          bazel build //cmd/ai-news-agent:pkg_linux_amd64 //cmd/ai-news-agent:pkg_deb
-          cp bazel-bin/cmd/ai-news-agent/ai-news-agent-linux-amd64.tar.gz release/
-          cp bazel-bin/cmd/ai-news-agent/ai-news-agent_1.0.0_all.deb release/
+          bazel build //cmd/ai-daily-brief:pkg_linux_amd64 //cmd/ai-daily-brief:pkg_deb
+          cp bazel-bin/cmd/ai-daily-brief/ai-daily-brief-linux-amd64.tar.gz release/
+          cp bazel-bin/cmd/ai-daily-brief/ai-daily-brief_1.0.0_all.deb release/
 
       - name: Build and Package for macOS (Intel x86_64 tarball)
         run: |
-          bazel build //cmd/ai-news-agent:pkg_darwin_amd64
-          cp bazel-bin/cmd/ai-news-agent/ai-news-agent-darwin-amd64.tar.gz release/
+          bazel build //cmd/ai-daily-brief:pkg_darwin_amd64
+          cp bazel-bin/cmd/ai-daily-brief/ai-daily-brief-darwin-amd64.tar.gz release/
 
       - name: Build and Package for macOS (ARM64 tarball & DMG Installer)
         run: |
           # Build default tarball
-          bazel build //cmd/ai-news-agent:pkg_darwin_arm64
-          cp bazel-bin/cmd/ai-news-agent/ai-news-agent-darwin-arm64.tar.gz release/
+          bazel build //cmd/ai-daily-brief:pkg_darwin_arm64
+          cp bazel-bin/cmd/ai-daily-brief/ai-daily-brief-darwin-arm64.tar.gz release/
 
           # Wrap into a draggable DMG
-          mkdir -p release/AI-News-Agent.app/Contents/MacOS
-          cp bazel-bin/cmd/ai-news-agent/ai_news_agent_darwin_arm64_/ai_news_agent_darwin_arm64 release/AI-News-Agent.app/Contents/MacOS/ai-news-agent
-          cp build/darwin/Info.plist release/AI-News-Agent.app/Contents/
+          mkdir -p release/AI-Daily-Brief.app/Contents/MacOS
+          cp bazel-bin/cmd/ai-daily-brief/ai_daily_brief_darwin_arm64_/ai_daily_brief_darwin_arm64 release/AI-Daily-Brief.app/Contents/MacOS/ai-daily-brief
+          cp build/darwin/Info.plist release/AI-Daily-Brief.app/Contents/
           create-dmg \
-            --volname "AI News Agent Installation" \
+            --volname "AI Daily Brief Installation" \
             --window-size 500 300 \
             --icon-size 100 \
-            --icon "AI-News-Agent.app" 175 120 \
+            --icon "AI-Daily-Brief.app" 175 120 \
             --app-drop-link 325 120 \
-            release/ai-news-agent-darwin-arm64.dmg \
-            release/AI-News-Agent.app/
-          rm -rf release/AI-News-Agent.app
+            release/ai-daily-brief-darwin-arm64.dmg \
+            release/AI-Daily-Brief.app/
+          rm -rf release/AI-Daily-Brief.app
 
       - name: Build and Package for Windows (x86_64 zip & EXE Installer)
         run: |
           # Build default zip
-          bazel build //cmd/ai-news-agent:pkg_windows_amd64
-          cp bazel-bin/cmd/ai-news-agent/ai-news-agent-windows-amd64.zip release/
+          bazel build //cmd/ai-daily-brief:pkg_windows_amd64
+          cp bazel-bin/cmd/ai-daily-brief/ai-daily-brief-windows-amd64.zip release/
 
           # Build NSIS Setup Wizard
-          bazel build //cmd/ai-news-agent:ai_news_agent_windows_amd64
+          bazel build //cmd/ai-daily-brief:ai_daily_brief_windows_amd64
           cd build/windows
-          makensis -D"BIN_NAME=../../bazel-bin/cmd/ai-news-agent/ai_news_agent_windows_amd64_/ai_news_agent_windows_amd64.exe" installer.nsi
-          cp ai-news-agent-setup.exe ../../release/
+          makensis -D"BIN_NAME=../../bazel-bin/cmd/ai-daily-brief/ai_daily_brief_windows_amd64_/ai_daily_brief_windows_amd64.exe" installer.nsi
+          cp ai-daily-brief-setup.exe ../../release/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

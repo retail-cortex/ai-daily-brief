@@ -21,7 +21,7 @@ describe('Header Component', () => {
     render(<Header {...defaultProps} />);
     
     // Check main title
-    expect(screen.getByText('AI & Cloud Intelligence Agent')).toBeInTheDocument();
+    expect(screen.getByText('AI Daily Brief')).toBeInTheDocument();
     
     // Check metric item count
     expect(screen.getByText('42')).toBeInTheDocument();

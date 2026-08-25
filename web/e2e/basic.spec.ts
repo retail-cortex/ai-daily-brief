@@ -11,5 +11,5 @@ test('has title', async ({ page }) => {
   await page.goto(`file://${indexPath}`);
 
   // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/AI & Cloud Intelligence Agent/);
+  await expect(page).toHaveTitle(/AI Daily Brief/);
 });

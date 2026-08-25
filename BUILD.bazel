@@ -1,26 +1,26 @@
 load("@gazelle//:def.bzl", "gazelle")
 
-# gazelle:prefix ai-news-agent
+# gazelle:prefix ai-daily-brief
 gazelle(name = "gazelle")
 
 exports_files([
     ".env.toml",
     "README.md",
     "build/darwin/Info.plist",
-    "build/linux/ai-news-agent.desktop",
+    "build/linux/ai-daily-brief.desktop",
     "build/windows/installer.nsi",
 ])
 
-# Shortcut alias to run the default news agent binary
+# Shortcut alias to run the default daily brief binary
 alias(
-    name = "ai-news-agent",
-    actual = "//cmd/ai-news-agent",
+    name = "ai-daily-brief",
+    actual = "//cmd/ai-daily-brief",
     visibility = ["//visibility:public"],
 )
 
 # Shortcut alias for ease of execution (bazel run //:run)
 alias(
     name = "run",
-    actual = "//cmd/ai-news-agent",
+    actual = "//cmd/ai-daily-brief",
     visibility = ["//visibility:public"],
 )

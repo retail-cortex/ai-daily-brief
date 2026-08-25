@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"ai-news-agent/internal/agent"
-	"ai-news-agent/internal/config"
-	"ai-news-agent/internal/crawler"
-	"ai-news-agent/internal/database"
-	"ai-news-agent/internal/mailer"
-	"ai-news-agent/internal/security"
+	"ai-daily-brief/internal/agent"
+	"ai-daily-brief/internal/config"
+	"ai-daily-brief/internal/crawler"
+	"ai-daily-brief/internal/database"
+	"ai-daily-brief/internal/mailer"
+	"ai-daily-brief/internal/security"
 
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
@@ -308,7 +308,7 @@ func (s *Server) setupRoutes() {
 				c.Data(http.StatusOK, "text/html; charset=utf-8", indexData)
 				return
 			}
-			c.String(http.StatusOK, "AI & Cloud Intelligence Agent - Ready")
+			c.String(http.StatusOK, "AI Daily Brief - Ready")
 		})
 	}
 }

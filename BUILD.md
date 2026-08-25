@@ -1,6 +1,6 @@
 # 🛠️ Build & Compilation Guide
 
-This document details how to compile, test, and build the **AI & Cloud Intelligence Agent** from source using the modern, hermetic **Bazel 9** build system.
+This document details how to compile, test, and build the **AI Daily Brief** from source using the modern, hermetic **Bazel 9** build system.
 
 ---
 
@@ -26,11 +26,11 @@ bazel build //...
 ```
 
 ### Run the application locally
-Compile and launch the news agent directly under the Bazel environment:
+Compile and launch the daily brief agent directly under the Bazel environment:
 ```bash
 bazel run //:run
 ```
-*(Alternatively, you can run the full target: `bazel run //cmd/ai-news-agent`)*
+*(Alternatively, you can run the full target: `bazel run //cmd/ai-daily-brief`)*
 
 
 ### Run all tests
@@ -53,38 +53,38 @@ Bazel compiles single-file static executables for all target platforms simultane
 
 ```bash
 # Build for Apple Silicon Mac (ARM64)
-bazel build //cmd/ai-news-agent:ai_news_agent_darwin_arm64
+bazel build //cmd/ai-daily-brief:ai_daily_brief_darwin_arm64
 
 # Build for Intel Mac (x86_64)
-bazel build //cmd/ai-news-agent:ai_news_agent_darwin_amd64
+bazel build //cmd/ai-daily-brief:ai_daily_brief_darwin_amd64
 
 # Build for Linux (x86_64)
-bazel build //cmd/ai-news-agent:ai_news_agent_linux_amd64
+bazel build //cmd/ai-daily-brief:ai_daily_brief_linux_amd64
 
 # Build for Windows (x86_64)
-bazel build //cmd/ai-news-agent:ai_news_agent_windows_amd64
+bazel build //cmd/ai-daily-brief:ai_daily_brief_windows_amd64
 ```
-The compiled binaries will be output to `bazel-bin/cmd/ai-news-agent/` in folders named `<target_name>_/`.
+The compiled binaries will be output to `bazel-bin/cmd/ai-daily-brief/` in folders named `<target_name>_/`.
 
 ### Standalone Distribution Archives
-To bundle the compiled executable side-by-side with the default configuration `.env.toml` file (which is required to run the news agent), build the packaged archive targets:
+To bundle the compiled executable side-by-side with the default configuration `.env.toml` file (which is required to run the application), build the packaged archive targets:
 
 ```bash
 # Package for Apple Silicon Mac (.tar.gz)
-bazel build //cmd/ai-news-agent:pkg_darwin_arm64
+bazel build //cmd/ai-daily-brief:pkg_darwin_arm64
 
 # Package for Intel Mac (.tar.gz)
-bazel build //cmd/ai-news-agent:pkg_darwin_amd64
+bazel build //cmd/ai-daily-brief:pkg_darwin_amd64
 
 # Package for Linux (.tar.gz)
-bazel build //cmd/ai-news-agent:pkg_linux_amd64
+bazel build //cmd/ai-daily-brief:pkg_linux_amd64
 # Package for Windows (.zip)
-bazel build //cmd/ai-news-agent:pkg_windows_amd64
+bazel build //cmd/ai-daily-brief:pkg_windows_amd64
 
 # Package for Linux / Chromebook (.deb Installer)
-bazel build //cmd/ai-news-agent:pkg_deb
+bazel build //cmd/ai-daily-brief:pkg_deb
 ```
-The output archives and installer packages (e.g., `ai-news-agent-darwin-arm64.tar.gz`, `ai-news-agent_1.0.0_all.deb`) will be generated at `bazel-bin/cmd/ai-news-agent/`.
+The output archives and installer packages (e.g., `ai-daily-brief-darwin-arm64.tar.gz`, `ai-daily-brief_1.0.0_all.deb`) will be generated at `bazel-bin/cmd/ai-daily-brief/`.
 
 ---
 
@@ -102,5 +102,5 @@ pnpm build
 cd ..
 
 # 3. Compile the Go binary (attaches web/dist/ automatically via embed)
-go build -o bin/ai-news-agent ./cmd/ai-news-agent
+go build -o bin/ai-daily-brief ./cmd/ai-daily-brief
 ```

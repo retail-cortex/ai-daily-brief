@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"ai-news-agent/internal/database"
+	"ai-daily-brief/internal/database"
 )
 
 var (

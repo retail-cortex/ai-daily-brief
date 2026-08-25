@@ -14,7 +14,7 @@ import (
 )
 
 // Default salt for deriving fallback key if ENCRYPTION_KEY is not set and file creation fails
-const defaultSalt = "ai-news-agent-secret-db-salt-value"
+const defaultSalt = "ai-daily-brief-secret-db-salt-value"
 
 func getEncryptionKey() []byte {
 	// 1. Check environment variable first
@@ -24,7 +24,7 @@ func getEncryptionKey() []byte {
 		return hash[:]
 	}
 
-	// 2. Check user's home directory key file (~/.ai_news/key)
+	// 2. Check user's home directory key file (~/.ai_daily_brief/key)
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.Printf("[Security] Error retrieving user home directory: %v. Using fallback salt.", err)
@@ -32,14 +32,14 @@ func getEncryptionKey() []byte {
 		return hash[:]
 	}
 
-	aiNewsDir := filepath.Join(homeDir, ".ai_news")
-	keyPath := filepath.Join(aiNewsDir, "key")
+	aiKeyDir := filepath.Join(homeDir, ".ai_daily_brief")
+	keyPath := filepath.Join(aiKeyDir, "key")
 
 	// Check if key file exists
 	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
-		// Create ~/.ai_news directory with user-only permissions (0700)
-		if err := os.MkdirAll(aiNewsDir, 0700); err != nil {
-			log.Printf("[Security] Error creating directory %s: %v. Using fallback salt.", aiNewsDir, err)
+		// Create ~/.ai_daily_brief directory with user-only permissions (0700)
+		if err := os.MkdirAll(aiKeyDir, 0700); err != nil {
+			log.Printf("[Security] Error creating directory %s: %v. Using fallback salt.", aiKeyDir, err)
 			hash := sha256.Sum256([]byte(defaultSalt))
 			return hash[:]
 		}

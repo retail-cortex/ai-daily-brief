@@ -74,7 +74,7 @@ func InitDB(customPath string) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	dbPath := filepath.Join(dbDir, "news_agent.db")
+	dbPath := filepath.Join(dbDir, "ai_daily_brief.db")
 	if customPath != "" {
 		dbPath = customPath
 	}

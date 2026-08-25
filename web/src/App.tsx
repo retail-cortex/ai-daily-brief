@@ -136,7 +136,7 @@ export function App() {
       {/* App Footer */}
       <footer className="border-t border-slate-800/80 bg-slate-950/40 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-          <p>Local AI & Cloud Intelligence Agent &bull; Standalone Go + Gin + GORM + SQLite + React</p>
+          <p>AI Daily Brief &bull; Standalone Go + Gin + GORM + SQLite + React</p>
         </div>
       </footer>
     </div>

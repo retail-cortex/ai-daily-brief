@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=AI News Agent
+Name=AI Daily Brief
 Comment=AI & Cloud Intelligence Agent dashboard
-Exec=ai-news-agent
+Exec=ai-daily-brief
 Icon=utilities-terminal
 Terminal=true
 Categories=Development;Utility;

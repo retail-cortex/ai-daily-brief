@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "security",
     srcs = ["security.go"],
-    importpath = "ai-news-agent/internal/security",
+    importpath = "ai-daily-brief/internal/security",
     visibility = ["//:__subpackages__"],
 )
 

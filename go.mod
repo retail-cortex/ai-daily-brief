@@ -1,4 +1,4 @@
-module ai-news-agent
+module ai-daily-brief
 
 go 1.26.3
 

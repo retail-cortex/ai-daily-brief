@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"ai-news-agent/internal/database"
+	"ai-daily-brief/internal/database"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/mmcdole/gofeed"

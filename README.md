@@ -1,4 +1,4 @@
-# ⚡ AI Intelligence & Research Agent
+# ⚡ AI Daily Brief
 
 A high-performance, single-binary AI news and research paper intelligence agent powered by **Go, Gin, GORM, SQLite, and embedded React**. It aggregates frontier model announcements, arXiv research papers, AI venture capital deals, GPU datacenter infrastructure, and open-source tooling into a unified tabular dashboard and daily HTML executive newsletter.
 
@@ -30,7 +30,7 @@ The recommended way to compile and run the application locally is using **Bazel*
 ```bash
 # Clone the repository
 git clone <repo_url>
-cd ai-model-news-agent
+cd ai-daily-brief
 
 # Run the hermetic Go server and auto-open the web dashboard
 bazel run //:run
@@ -44,11 +44,11 @@ When started, the application launches the Gin server and automatically opens **
 
 If you prefer to install the application as a native desktop utility rather than building it from source, download the pre-compiled installer for your operating system from the **GitHub Releases** page:
 
-*   **macOS (Apple Silicon M1/M2/M3/M4)**: Download `ai-news-agent-darwin-arm64.dmg`. Double-click to mount the disk image and drag the app into your `/Applications` directory.
-*   **Windows (64-bit)**: Download `ai-news-agent-setup.exe`. Double-click to run the setup wizard, which will install the server, set up default configuration settings, and register Start Menu shortcuts.
-*   **Linux / Chromebook (Debian/Ubuntu)**: Download `ai-news-agent_1.0.0_all.deb`. Double-click the file (directly from the Files app on ChromeOS) to install the program and register a shortcut launcher in your desktop/Crostini App Drawer.
+*   **macOS (Apple Silicon M1/M2/M3/M4)**: Download `ai-daily-brief-darwin-arm64.dmg`. Double-click to mount the disk image and drag the app into your `/Applications` directory.
+*   **Windows (64-bit)**: Download `ai-daily-brief-setup.exe`. Double-click to run the setup wizard, which will install the server, set up default configuration settings, and register Start Menu shortcuts.
+*   **Linux / Chromebook (Debian/Ubuntu)**: Download `ai-daily-brief_1.0.0_all.deb`. Double-click the file (directly from the Files app on ChromeOS) to install the program and register a shortcut launcher in your desktop/Crostini App Drawer.
 
-For complete compilation and cross-platform build commands, see [BUILD.md](file:///Users/ryan/.gemini/antigravity/scratch/ai-model-news-agent/BUILD.md).
+For complete compilation and cross-platform build commands, see [BUILD.md](file:///Users/ryan/Projects/retail-cortex/ai-daily-brief/BUILD.md).
 
 ---
 
@@ -87,7 +87,7 @@ The **Daily Executive Digest** tab allows you to preview, copy, or download the 
 
 ```text
 ├── cmd/
-│   └── ai-news-agent/
+│   └── ai-daily-brief/
 │       └── main.go       # Main entry point & CLI handler
 ├── internal/
 │   ├── agent/            # Gemini client & content enricher

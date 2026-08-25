@@ -1,5 +1,5 @@
 module(
-    name = "ai_news_agent",
+    name = "ai_daily_brief",
     version = "0.0.0",
 )
 

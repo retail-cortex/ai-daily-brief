@@ -7,7 +7,7 @@ go_library(
         "enricher.go",
         "gemini.go",
     ],
-    importpath = "ai-news-agent/internal/agent",
+    importpath = "ai-daily-brief/internal/agent",
     visibility = ["//:__subpackages__"],
     deps = [
         "//internal/config",

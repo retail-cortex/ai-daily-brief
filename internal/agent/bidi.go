@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"ai-news-agent/internal/database"
+	"ai-daily-brief/internal/database"
 
 	"github.com/gorilla/websocket"
 	"gorm.io/gorm"

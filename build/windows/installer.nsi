@@ -1,8 +1,8 @@
-!define APP_NAME "AI News Agent"
-!define COMP_NAME "AI News Agent Developer"
+!define APP_NAME "AI Daily Brief"
+!define COMP_NAME "AI Daily Brief Developer"
 !define VERSION "1.0.0"
-!define OUT_FILE "ai-news-agent-setup.exe"
-!define BIN_NAME "ai_news_agent_windows_amd64.exe"
+!define OUT_FILE "ai-daily-brief-setup.exe"
+!define BIN_NAME "ai_daily_brief_windows_amd64.exe"
 
 Name "${APP_NAME}"
 OutFile "${OUT_FILE}"
@@ -16,20 +16,20 @@ Section "Install"
   SetOutPath "$INSTDIR"
   
   # Copy compiled binary (renamed to simple executable), config, and docs
-  File /oname=ai-news-agent.exe "${BIN_NAME}"
+  File /oname=ai-daily-brief.exe "${BIN_NAME}"
   File "..\..\.env.toml"
   File "..\..\README.md"
   
   # Create Start Menu shortcuts
   CreateDirectory "$SMPROGRAMS\${APP_NAME}"
-  CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\ai-news-agent.exe" "" "$INSTDIR\ai-news-agent.exe" 0
+  CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\ai-daily-brief.exe" "" "$INSTDIR\ai-daily-brief.exe" 0
   CreateShortcut "$SMPROGRAMS\${APP_NAME}\Uninstall.lnk" "$INSTDIR\uninstall.exe"
   
   WriteUninstaller "$INSTDIR\uninstall.exe"
 SectionEnd
 
 Section "Uninstall"
-  Delete "$INSTDIR\ai-news-agent.exe"
+  Delete "$INSTDIR\ai-daily-brief.exe"
   Delete "$INSTDIR\.env.toml"
   Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\uninstall.exe"

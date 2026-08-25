@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "crawler",
     srcs = ["crawler.go"],
-    importpath = "ai-news-agent/internal/crawler",
+    importpath = "ai-daily-brief/internal/crawler",
     visibility = ["//:__subpackages__"],
     deps = [
         "//internal/database",

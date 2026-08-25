@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "server",
     srcs = ["server.go"],
-    importpath = "ai-news-agent/internal/server",
+    importpath = "ai-daily-brief/internal/server",
     visibility = ["//:__subpackages__"],
     deps = [
         "//internal/agent",

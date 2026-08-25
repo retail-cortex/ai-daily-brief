@@ -30,8 +30,9 @@ data/
 # Local Go Binaries
 bin/
 dist-bin/
-ai-news-agent
-ai-news-agent.exe
+/ai-daily-brief
+/ai-daily-brief.exe
+
 
 # Editor & OS Artifacts
 .vscode/*
