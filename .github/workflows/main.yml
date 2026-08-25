@@ -67,18 +67,29 @@ jobs:
           bazel build //cmd/ai-daily-brief:pkg_darwin_arm64 //cmd/ai-daily-brief:ai_daily_brief_darwin_arm64
           cp $(bazel cquery //cmd/ai-daily-brief:pkg_darwin_arm64 --output=files) release/
 
-          # Wrap into a draggable DMG
+          # Construct proper macOS App Bundle
           mkdir -p release/AI-Daily-Brief.app/Contents/MacOS
+          mkdir -p release/AI-Daily-Brief.app/Contents/Resources
           BIN_PATH=$(bazel cquery //cmd/ai-daily-brief:ai_daily_brief_darwin_arm64 --output=files)
           cp "$BIN_PATH" release/AI-Daily-Brief.app/Contents/MacOS/ai-daily-brief
           chmod +x release/AI-Daily-Brief.app/Contents/MacOS/ai-daily-brief
           cp build/darwin/Info.plist release/AI-Daily-Brief.app/Contents/
+          cp build/darwin/AppIcon.icns release/AI-Daily-Brief.app/Contents/Resources/
+          echo -n "APPL????" > release/AI-Daily-Brief.app/Contents/PkgInfo
+
+          # Ad-hoc code sign the bundle to satisfy macOS Gatekeeper
+          codesign --force --deep --sign - "release/AI-Daily-Brief.app"
+
+          # Wrap into a styled draggable DMG with volume icon
           create-dmg \
             --volname "AI Daily Brief Installation" \
-            --window-size 500 300 \
+            --volicon "build/darwin/AppIcon.icns" \
+            --window-pos 200 120 \
+            --window-size 540 380 \
             --icon-size 100 \
-            --icon "AI-Daily-Brief.app" 175 120 \
-            --app-drop-link 325 120 \
+            --icon "AI-Daily-Brief.app" 140 180 \
+            --app-drop-link 400 180 \
+            --hide-extension "AI-Daily-Brief.app" \
             release/ai-daily-brief-darwin-arm64.dmg \
             release/AI-Daily-Brief.app/
           rm -rf release/AI-Daily-Brief.app

@@ -23,6 +23,7 @@ exports_files([
     ".env.toml",
     "README.md",
     "build/darwin/Info.plist",
+    "build/darwin/AppIcon.icns",
     "build/linux/ai-daily-brief.desktop",
     "build/windows/installer.nsi",
 ])
