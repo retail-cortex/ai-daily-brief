@@ -80,19 +80,26 @@ jobs:
           # Ad-hoc code sign the bundle to satisfy macOS Gatekeeper
           codesign --force --deep --sign - "release/AI-Daily-Brief.app"
 
+          # Prepare DMG source folder with app and first-time launch helper
+          mkdir -p release/dmg_root
+          mv release/AI-Daily-Brief.app release/dmg_root/
+          cp build/darwin/Open_First_Time.command release/dmg_root/
+          chmod +x release/dmg_root/Open_First_Time.command
+
           # Wrap into a styled draggable DMG with volume icon
           create-dmg \
             --volname "AI Daily Brief Installation" \
             --volicon "build/darwin/AppIcon.icns" \
             --window-pos 200 120 \
-            --window-size 540 380 \
+            --window-size 580 400 \
             --icon-size 100 \
-            --icon "AI-Daily-Brief.app" 140 180 \
-            --app-drop-link 400 180 \
+            --icon "AI-Daily-Brief.app" 140 140 \
+            --app-drop-link 440 140 \
+            --icon "Open_First_Time.command" 290 270 \
             --hide-extension "AI-Daily-Brief.app" \
             release/ai-daily-brief-darwin-arm64.dmg \
-            release/AI-Daily-Brief.app/
-          rm -rf release/AI-Daily-Brief.app
+            release/dmg_root/
+          rm -rf release/dmg_root
 
       - name: Build and Package for Windows (x86_64 zip & EXE Installer)
         run: |

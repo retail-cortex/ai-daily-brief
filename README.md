@@ -44,7 +44,7 @@ When started, the application launches the Gin server and automatically opens **
 
 If you prefer to install the application as a native desktop utility rather than building it from source, download the pre-compiled installer for your operating system from the **GitHub Releases** page:
 
-*   **macOS (Apple Silicon M1/M2/M3/M4)**: Download `ai-daily-brief-darwin-arm64.dmg`. Double-click to mount the disk image and drag the app into your `/Applications` directory.
+*   **macOS (Apple Silicon M1/M2/M3/M4)**: Download `ai-daily-brief-darwin-arm64.dmg`. Double-click to mount the disk image, drag **AI Daily Brief** into `/Applications`, and double-click `Open_First_Time.command` (included inside the DMG) to automatically clear quarantine attributes and launch the app.
 *   **Windows (64-bit)**: Download `ai-daily-brief-setup.exe`. Double-click to run the setup wizard, which will install the server, set up default configuration settings, and register Start Menu shortcuts.
 *   **Linux / Chromebook (Debian/Ubuntu)**: Download `ai-daily-brief_1.0.0_all.deb`. Double-click the file (directly from the Files app on ChromeOS) to install the program and register a shortcut launcher in your desktop/Crostini App Drawer.
 

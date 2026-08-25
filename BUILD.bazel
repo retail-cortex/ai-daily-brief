@@ -24,6 +24,7 @@ exports_files([
     "README.md",
     "build/darwin/Info.plist",
     "build/darwin/AppIcon.icns",
+    "build/darwin/Open_First_Time.command",
     "build/linux/ai-daily-brief.desktop",
     "build/windows/installer.nsi",
 ])
