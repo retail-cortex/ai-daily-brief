@@ -15,7 +15,6 @@
 package server
 
 import (
-	"embed"
 	"io/fs"
 	"log"
 	"net/http"
@@ -39,7 +38,7 @@ type Server struct {
 	DB        *gorm.DB
 	Router    *gin.Engine
 	Cron      *cron.Cron
-	EmbedDist embed.FS
+	EmbedDist fs.FS
 }
 
 func CORSMiddleware() gin.HandlerFunc {
@@ -57,7 +56,7 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 }
 
-func NewServer(db *gorm.DB, embedDist embed.FS) *Server {
+func NewServer(db *gorm.DB, embedDist fs.FS) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())

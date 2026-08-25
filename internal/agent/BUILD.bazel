@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "agent",
@@ -31,5 +31,19 @@ go_library(
         "@com_github_puerkitobio_goquery//:goquery",
         "@io_gorm_gorm//:gorm",
         "@org_golang_x_oauth2//google",
+    ],
+)
+
+go_test(
+    name = "agent_test",
+    srcs = ["gemini_test.go"],
+    embed = [":agent"],
+    deps = [
+        "//internal/config",
+        "//internal/database",
+        "//internal/security",
+        "@com_github_glebarez_sqlite//:sqlite",
+        "@io_gorm_gorm//:gorm",
+        "@io_gorm_gorm//logger",
     ],
 )
