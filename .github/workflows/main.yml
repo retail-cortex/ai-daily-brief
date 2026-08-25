@@ -50,6 +50,11 @@ jobs:
       - name: Create Release Directory
         run: mkdir release
 
+      - name: Build Web Frontend Assets
+        run: |
+          bazel build //web:build
+          cp -r bazel-bin/web/dist/* cmd/ai-daily-brief/dist/
+
       - name: Build and Package for Linux (x86_64 tarball & debian package)
         run: |
           bazel build //cmd/ai-daily-brief:pkg_linux_amd64 //cmd/ai-daily-brief:pkg_deb

@@ -31,7 +31,7 @@ import (
 	"ai-daily-brief/internal/server"
 )
 
-//go:embed dist/*
+//go:embed all:dist
 var embedDist embed.FS
 
 func openBrowser(url string) {
