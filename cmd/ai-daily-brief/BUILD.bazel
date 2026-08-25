@@ -1,3 +1,17 @@
+# Copyright 2026 Retail Cortex
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_pkg//pkg:deb.bzl", "pkg_deb")
 load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_files")
@@ -63,6 +77,8 @@ pkg_tar(
     srcs = [
         ":ai_daily_brief_darwin_arm64",
         "//:.env.toml",
+        "//:LICENSE",
+        "//:NOTICE",
         "//:README.md",
     ],
     out = "ai-daily-brief-darwin-arm64.tar.gz",
@@ -75,6 +91,8 @@ pkg_tar(
     srcs = [
         ":ai_daily_brief_darwin_amd64",
         "//:.env.toml",
+        "//:LICENSE",
+        "//:NOTICE",
         "//:README.md",
     ],
     out = "ai-daily-brief-darwin-amd64.tar.gz",
@@ -87,6 +105,8 @@ pkg_tar(
     srcs = [
         ":ai_daily_brief_linux_amd64",
         "//:.env.toml",
+        "//:LICENSE",
+        "//:NOTICE",
         "//:README.md",
     ],
     out = "ai-daily-brief-linux-amd64.tar.gz",
@@ -99,6 +119,8 @@ pkg_zip(
     srcs = [
         ":ai_daily_brief_windows_amd64",
         "//:.env.toml",
+        "//:LICENSE",
+        "//:NOTICE",
         "//:README.md",
     ],
     out = "ai-daily-brief-windows-amd64.zip",
