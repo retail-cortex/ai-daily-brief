@@ -267,7 +267,7 @@ export const AgentSettingsModal: React.FC<AgentSettingsModalProps> = ({ isOpen, 
                   type="text"
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  placeholder="my-gcp-project-123"
+                  placeholder="e.g. my-project-id (or auto-detected from ADC)"
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
                 />
               </div>
@@ -282,8 +282,8 @@ export const AgentSettingsModal: React.FC<AgentSettingsModalProps> = ({ isOpen, 
                 />
               </div>
             </div>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              Uses Application Default Credentials (ADC) from <code>gcloud auth application-default login</code> or GCP instance metadata.
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              ⚡ <strong>Zero API key required.</strong> Automatically uses Application Default Credentials (ADC) from <code>gcloud auth application-default login</code> or GCP compute metadata.
             </p>
           </div>
         )}

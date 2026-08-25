@@ -274,7 +274,7 @@ func (s *Server) setupRoutes() {
 				}
 			}
 
-			res, err := agent.GenerateRawContent(s.DB, "You are a test validator.", "Respond with exactly: 'Gemini connection successful!'")
+			res, err := agent.GenerateRawContentWithModel(s.DB, model, "You are a test validator.", "Respond with exactly: 'Gemini connection successful!'")
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,

@@ -86,47 +86,82 @@ func getSetting(db *gorm.DB, key, defaultValue string) string {
 	return defaultValue
 }
 
-// getVertexAccessToken fetches a GCP OAuth2 token using Application Default Credentials (ADC)
-func getVertexAccessToken(ctx context.Context) (string, error) {
+// GetAgentSettings retrieves LLM configuration prioritizing runtime database settings over static config
+func GetAgentSettings(db *gorm.DB) (model, authMode, apiKey, projectID, location string) {
+	// 1. Read DB settings first (User GUI configured settings)
+	model = getSetting(db, "gemini_model", "")
+	authMode = getSetting(db, "gemini_auth_mode", "")
+	apiKey = getSetting(db, "gemini_api_key", "")
+	projectID = getSetting(db, "vertex_project_id", "")
+	location = getSetting(db, "vertex_location", "")
+
+	// 2. Check environment variables
+	if envKey := os.Getenv("GEMINI_API_KEY"); envKey != "" && apiKey == "" {
+		apiKey = envKey
+	}
+	if envProject := os.Getenv("GOOGLE_CLOUD_PROJECT"); envProject != "" && projectID == "" {
+		projectID = envProject
+	} else if envGCP := os.Getenv("GCP_PROJECT"); envGCP != "" && projectID == "" {
+		projectID = envGCP
+	}
+
+	// 3. Fallback to static .env.toml config file if not set in DB
+	if config.AppConfig != nil {
+		if model == "" {
+			model = config.AppConfig.Gemini.Model
+		}
+		if authMode == "" {
+			authMode = config.AppConfig.Gemini.AuthMode
+		}
+		if apiKey == "" {
+			apiKey = config.AppConfig.Gemini.APIKey
+		}
+		if projectID == "" {
+			projectID = config.AppConfig.Gemini.VertexProjectID
+		}
+		if location == "" {
+			location = config.AppConfig.Gemini.VertexLocation
+		}
+	}
+
+	// 4. Default values
+	if model == "" {
+		model = "gemini-3.7-flash"
+	}
+	if authMode == "" {
+		authMode = "api_key"
+	}
+	if location == "" {
+		location = "us-central1"
+	}
+	return
+}
+
+// getVertexCredentials fetches GCP Application Default Credentials (ADC) and OAuth2 token
+func getVertexCredentials(ctx context.Context) (*google.Credentials, string, error) {
 	creds, err := google.FindDefaultCredentials(ctx, "https://www.googleapis.com/auth/cloud-platform")
 	if err != nil {
-		return "", fmt.Errorf("Google Cloud ADC not found: %w (Ensure 'gcloud auth application-default login' was executed)", err)
+		return nil, "", fmt.Errorf("Google Cloud Application Default Credentials (ADC) not found: %w. Run 'gcloud auth application-default login' to authenticate", err)
 	}
 	token, err := creds.TokenSource.Token()
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve OAuth2 token from ADC: %w", err)
+		return nil, "", fmt.Errorf("failed to retrieve OAuth2 token from ADC: %w", err)
 	}
-	return token.AccessToken, nil
+	return creds, token.AccessToken, nil
 }
 
-// GenerateRawContent sends the request to either Google AI Studio or Vertex AI ADC
+// GenerateRawContent sends the request using configured model and auth method
 func GenerateRawContent(db *gorm.DB, systemInstruction, userPrompt string) (string, error) {
-	var model, authMode, apiKey, projectID, location string
-	if config.AppConfig != nil {
-		model = config.AppConfig.Gemini.Model
-		authMode = config.AppConfig.Gemini.AuthMode
-		apiKey = config.AppConfig.Gemini.APIKey
-		projectID = config.AppConfig.Gemini.VertexProjectID
-		location = config.AppConfig.Gemini.VertexLocation
-	}
+	return GenerateRawContentWithModel(db, "", systemInstruction, userPrompt)
+}
 
-	if model == "" {
-		model = getSetting(db, "gemini_model", "gemini-3.7-flash")
+// GenerateRawContentWithModel sends the request to either Google AI Studio or Vertex AI ADC with a specific model
+func GenerateRawContentWithModel(db *gorm.DB, requestedModel, systemInstruction, userPrompt string) (string, error) {
+	model, authMode, apiKey, projectID, location := GetAgentSettings(db)
+	if requestedModel != "" {
+		model = requestedModel
 	}
-	if authMode == "" {
-		authMode = getSetting(db, "gemini_auth_mode", "api_key")
-	}
-	if envKey := os.Getenv("GEMINI_API_KEY"); envKey != "" {
-		apiKey = envKey
-	} else if apiKey == "" {
-		apiKey = getSetting(db, "gemini_api_key", "")
-	}
-	if projectID == "" {
-		projectID = getSetting(db, "vertex_project_id", "")
-	}
-	if location == "" {
-		location = getSetting(db, "vertex_location", "us-central1")
-	}
+	model = strings.TrimPrefix(model, "models/")
 
 	reqPayload := GeminiRequest{
 		Contents: []GeminiContent{
@@ -159,18 +194,22 @@ func GenerateRawContent(db *gorm.DB, systemInstruction, userPrompt string) (stri
 	var req *http.Request
 
 	if authMode == "vertex_adc" {
-		if projectID == "" {
-			return "", fmt.Errorf("Google Cloud Project ID is required for Vertex AI ADC mode")
-		}
-		endpoint = fmt.Sprintf("https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent", location, projectID, location, model)
-
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 		defer cancel()
 
-		token, err := getVertexAccessToken(ctx)
+		creds, token, err := getVertexCredentials(ctx)
 		if err != nil {
 			return "", err
 		}
+
+		if projectID == "" && creds.ProjectID != "" {
+			projectID = creds.ProjectID
+		}
+		if projectID == "" {
+			return "", fmt.Errorf("Google Cloud Project ID is required for Vertex AI ADC mode. Please enter your GCP Project ID in Agent Settings")
+		}
+
+		endpoint = fmt.Sprintf("https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent", location, projectID, location, model)
 
 		req, err = http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(bodyBytes))
 		if err != nil {
@@ -181,11 +220,11 @@ func GenerateRawContent(db *gorm.DB, systemInstruction, userPrompt string) (stri
 	} else {
 		// API Key Mode
 		if apiKey == "" {
-			return "", fmt.Errorf("Gemini API key is not configured. Please enter your API key in Agent Settings")
+			return "", fmt.Errorf("Gemini API key is not configured. Please enter your API key in Agent Settings or switch to Vertex AI (ADC)")
 		}
 		endpoint = fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, apiKey)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 		defer cancel()
 
 		req, err = http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(bodyBytes))
@@ -195,7 +234,7 @@ func GenerateRawContent(db *gorm.DB, systemInstruction, userPrompt string) (stri
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	client := &http.Client{Timeout: 25 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("Gemini request failed: %w", err)

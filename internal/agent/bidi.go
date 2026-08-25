@@ -84,32 +84,22 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		voice = "Aoede" // Default expressive neural voice
 	}
 
-	model := r.URL.Query().Get("model")
-	if model == "" || model == "gemini-2.0-flash-exp" {
-		// Use official native audio live model
-		model = "models/gemini-2.5-flash-native-audio-latest"
-	}
-	if !strings.HasPrefix(model, "models/") {
-		model = "models/" + model
-	}
+	_, authMode, apiKey, projectID, location := GetAgentSettings(db)
 
-	apiKey := getSetting(db, "gemini_api_key", "")
-	authMode := getSetting(db, "gemini_auth_mode", "api_key")
-	projectID := getSetting(db, "vertex_project_id", "")
-	location := getSetting(db, "vertex_location", "us-central1")
+	reqModel := r.URL.Query().Get("model")
+	if reqModel == "" || reqModel == "gemini-2.0-flash-exp" {
+		// Use official native audio live model
+		reqModel = "gemini-2.5-flash-native-audio-latest"
+	}
+	rawModel := strings.TrimPrefix(reqModel, "models/")
 
 	var upstreamURL string
+	var setupModel string
 	var header http.Header = make(http.Header)
 
 	if authMode == "vertex_adc" {
-		if projectID == "" {
-			clientConn.WriteJSON(map[string]interface{}{
-				"error": "Google Cloud Project ID is not configured in Agent Settings",
-			})
-			return
-		}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		token, err := getVertexAccessToken(ctx)
+		creds, token, err := getVertexCredentials(ctx)
 		cancel()
 		if err != nil {
 			clientConn.WriteJSON(map[string]interface{}{
@@ -117,19 +107,30 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+		if projectID == "" && creds.ProjectID != "" {
+			projectID = creds.ProjectID
+		}
+		if projectID == "" {
+			clientConn.WriteJSON(map[string]interface{}{
+				"error": "Google Cloud Project ID is required for Vertex AI ADC mode. Please enter your GCP Project ID in Agent Settings",
+			})
+			return
+		}
 		upstreamURL = fmt.Sprintf("wss://%s-aiplatform.googleapis.com/ws/google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent", location)
+		setupModel = fmt.Sprintf("projects/%s/locations/%s/publishers/google/models/%s", projectID, location, rawModel)
 		header.Set("Authorization", "Bearer "+token)
 	} else {
 		if apiKey == "" {
 			clientConn.WriteJSON(map[string]interface{}{
-				"error": "Gemini API key is not configured. Please enter your API key in Agent Settings",
+				"error": "Gemini API key is not configured. Please enter your API key in Agent Settings or switch to Vertex AI (ADC)",
 			})
 			return
 		}
 		upstreamURL = fmt.Sprintf("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=%s", apiKey)
+		setupModel = "models/" + rawModel
 	}
 
-	log.Printf("[Bidi] Connecting to Gemini Live upstream WebSocket: %s (Voice: %s, Article: %s)", model, voice, articleID)
+	log.Printf("[Bidi] Connecting to Gemini Live upstream WebSocket: %s (Voice: %s, Article: %s)", setupModel, voice, articleID)
 
 	dialer := websocket.DefaultDialer
 	dialer.HandshakeTimeout = 15 * time.Second
@@ -169,7 +170,7 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	// 1. Send Initial Bidi Setup Message to Gemini Live
 	setupMsg := BidiSetupMessage{
 		Setup: BidiSetupPayload{
-			Model: model,
+			Model: setupModel,
 			GenerationConfig: &BidiGenerationConfig{
 				ResponseModalities: []string{"AUDIO"},
 				SpeechConfig: &BidiSpeechConfig{
@@ -199,7 +200,7 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	clientConn.WriteJSON(map[string]interface{}{
 		"connected": true,
 		"voice":     voice,
-		"model":     model,
+		"model":     setupModel,
 		"grounded":  articleID != "",
 	})
 
