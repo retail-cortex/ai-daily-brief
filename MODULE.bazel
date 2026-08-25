@@ -36,7 +36,7 @@ use_repo(
 )
 
 # Node / NPM / pnpm Configuration via rules_js
-bazel_dep(name = "rules_nodejs", version = "6.3.0")
+bazel_dep(name = "rules_nodejs", version = "6.7.3")
 bazel_dep(name = "aspect_rules_js", version = "3.4.0")
 
 # Node toolchain setup

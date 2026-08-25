@@ -7,7 +7,9 @@ pnpm-debug.log*
 
 # Node & Frontend Build
 node_modules
-dist
+/web/dist
+/dist
+!cmd/**/dist/**
 dist-ssr
 *.local
 
