@@ -12,11 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-!define APP_NAME "AI Daily Brief"
-!define COMP_NAME "AI Daily Brief Developer"
-!define VERSION "1.0.0"
-!define OUT_FILE "ai-daily-brief-setup.exe"
-!define BIN_NAME "ai_daily_brief_windows_amd64.exe"
+!ifndef APP_NAME
+  !define APP_NAME "AI Daily Brief"
+!endif
+!ifndef COMP_NAME
+  !define COMP_NAME "AI Daily Brief Developer"
+!endif
+!ifndef VERSION
+  !define VERSION "1.0.0"
+!endif
+!ifndef OUT_FILE
+  !define OUT_FILE "ai-daily-brief-setup.exe"
+!endif
+!ifndef BIN_NAME
+  !define BIN_NAME "ai_daily_brief_windows_amd64.exe"
+!endif
 
 Name "${APP_NAME}"
 OutFile "${OUT_FILE}"
