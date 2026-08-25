@@ -1,0 +1,108 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/coverage.svg"
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bazel Setup
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Mount bazel cache
+        uses: actions/cache@v4
+        with:
+          path: "/home/runner/.cache/bazel"
+          key: bazel-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            bazel-${{ runner.os }}-
+
+      - name: "Build Workspace"
+        run: bazel build //...
+
+  release:
+    name: Release
+    runs-on: macos-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Bazel Setup
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Install Packaging Utilities
+        run: brew install create-dmg nsis
+
+      - name: Create Release Directory
+        run: mkdir release
+
+      - name: Build and Package for Linux (x86_64 tarball & debian package)
+        run: |
+          bazel build //cmd/ai-news-agent:pkg_linux_amd64 //cmd/ai-news-agent:pkg_deb
+          cp bazel-bin/cmd/ai-news-agent/ai-news-agent-linux-amd64.tar.gz release/
+          cp bazel-bin/cmd/ai-news-agent/ai-news-agent_1.0.0_all.deb release/
+
+      - name: Build and Package for macOS (Intel x86_64 tarball)
+        run: |
+          bazel build //cmd/ai-news-agent:pkg_darwin_amd64
+          cp bazel-bin/cmd/ai-news-agent/ai-news-agent-darwin-amd64.tar.gz release/
+
+      - name: Build and Package for macOS (ARM64 tarball & DMG Installer)
+        run: |
+          # Build default tarball
+          bazel build //cmd/ai-news-agent:pkg_darwin_arm64
+          cp bazel-bin/cmd/ai-news-agent/ai-news-agent-darwin-arm64.tar.gz release/
+
+          # Wrap into a draggable DMG
+          mkdir -p release/AI-News-Agent.app/Contents/MacOS
+          cp bazel-bin/cmd/ai-news-agent/ai_news_agent_darwin_arm64_/ai_news_agent_darwin_arm64 release/AI-News-Agent.app/Contents/MacOS/ai-news-agent
+          cp build/darwin/Info.plist release/AI-News-Agent.app/Contents/
+          create-dmg \
+            --volname "AI News Agent Installation" \
+            --window-size 500 300 \
+            --icon-size 100 \
+            --icon "AI-News-Agent.app" 175 120 \
+            --app-drop-link 325 120 \
+            release/ai-news-agent-darwin-arm64.dmg \
+            release/AI-News-Agent.app/
+          rm -rf release/AI-News-Agent.app
+
+      - name: Build and Package for Windows (x86_64 zip & EXE Installer)
+        run: |
+          # Build default zip
+          bazel build //cmd/ai-news-agent:pkg_windows_amd64
+          cp bazel-bin/cmd/ai-news-agent/ai-news-agent-windows-amd64.zip release/
+
+          # Build NSIS Setup Wizard
+          bazel build //cmd/ai-news-agent:ai_news_agent_windows_amd64
+          cd build/windows
+          makensis -D"BIN_NAME=../../bazel-bin/cmd/ai-news-agent/ai_news_agent_windows_amd64_/ai_news_agent_windows_amd64.exe" installer.nsi
+          cp ai-news-agent-setup.exe ../../release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "release-${{ github.sha }}"
+          files: |
+            release/*.tar.gz
+            release/*.zip
+            release/*.deb
+            release/*.dmg
+            release/*.exe
+          generate_release_notes: true

@@ -1,0 +1,57 @@
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//web:vite/package_json.bzl", "bin")
+load("@npm//web:vitest/package_json.bzl", vitest_bin = "bin")
+
+# Link all packages from package.json/pnpm-lock.yaml
+npm_link_all_packages(name = "node_modules")
+
+# Build target for compiled assets using the vite binary rule
+bin.vite(
+    name = "build",
+    srcs = glob([
+        "src/**",
+        "public/**",
+    ]) + [
+        "index.html",
+        "package.json",
+        "tsconfig.app.json",
+        "tsconfig.json",
+        "tsconfig.node.json",
+        "vite.config.ts",
+        ":node_modules",
+    ],
+    args = ["build"],
+    chdir = "web",
+    out_dirs = ["dist"],
+    visibility = ["//visibility:public"],
+)
+
+# Export built files
+filegroup(
+    name = "dist_files",
+    srcs = [":build"],
+    visibility = ["//visibility:public"],
+)
+
+# Vitest test target
+vitest_bin.vitest_test(
+    name = "test",
+    size = "medium",
+    args = [
+        "run",
+        "-c",
+        "vitest.config.ts",
+    ],
+    chdir = "web",
+    data = glob([
+        "src/**",
+    ]) + [
+        "package.json",
+        "tsconfig.app.json",
+        "tsconfig.json",
+        "tsconfig.node.json",
+        "vite.config.ts",
+        "vitest.config.ts",
+        ":node_modules",
+    ],
+)

@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "server",
+    srcs = ["server.go"],
+    importpath = "ai-news-agent/internal/server",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/agent",
+        "//internal/config",
+        "//internal/crawler",
+        "//internal/database",
+        "//internal/mailer",
+        "//internal/security",
+        "@com_github_gin_gonic_gin//:gin",
+        "@com_github_robfig_cron_v3//:cron",
+        "@io_gorm_gorm//:gorm",
+    ],
+)

@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "mailer",
+    srcs = ["mailer.go"],
+    importpath = "ai-news-agent/internal/mailer",
+    visibility = ["//:__subpackages__"],
+    deps = ["//internal/database"],
+)

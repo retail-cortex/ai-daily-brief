@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "agent",
+    srcs = [
+        "bidi.go",
+        "enricher.go",
+        "gemini.go",
+    ],
+    importpath = "ai-news-agent/internal/agent",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/config",
+        "//internal/database",
+        "//internal/security",
+        "@com_github_gorilla_websocket//:websocket",
+        "@com_github_puerkitobio_goquery//:goquery",
+        "@io_gorm_gorm//:gorm",
+        "@org_golang_x_oauth2//google",
+    ],
+)

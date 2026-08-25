@@ -1,0 +1,27 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "bazel-ai-model-news-agent": true,
+      "bazel-bin": true,
+      "bazel-out": true,
+      "bazel-testlogs": true
+    },
+    "search.exclude": {
+      "bazel-ai-model-news-agent": true,
+      "bazel-bin": true,
+      "bazel-out": true,
+      "bazel-testlogs": true
+    },
+    "files.watcherExclude": {
+      "bazel-ai-model-news-agent/**": true,
+      "bazel-bin/**": true,
+      "bazel-out/**": true,
+      "bazel-testlogs/**": true
+    }
+  }
+}
