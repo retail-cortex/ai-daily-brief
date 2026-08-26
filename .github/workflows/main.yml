@@ -31,9 +31,9 @@ jobs:
       - name: "Test Workspace"
         run: bazel test //...
 
-      - name: "Build Cloud Run MCP Server Binaries"
+      - name: "Build Cloud Run MCP Server Binaries & Hugo Documentation"
         run: |
-          bazel build //cmd/mcp-server:mcp-server //cmd/mcp-server:mcp_server_linux_amd64 //cmd/mcp-server:mcp_server_linux_arm64 //cmd/mcp-server:pkg_mcp_linux_amd64
+          bazel build //cmd/mcp-server:mcp-server //cmd/mcp-server:mcp_server_linux_amd64 //cmd/mcp-server:mcp_server_linux_arm64 //cmd/mcp-server:pkg_mcp_linux_amd64 //docs:docs
 
   release:
     name: Release

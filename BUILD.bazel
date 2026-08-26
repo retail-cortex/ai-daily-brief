@@ -50,3 +50,16 @@ alias(
     actual = "//cmd/mcp-server",
     visibility = ["//visibility:public"],
 )
+
+# Documentation aliases powered by rules_hugo
+alias(
+    name = "docs",
+    actual = "//docs:docs",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "serve-docs",
+    actual = "//docs:serve",
+    visibility = ["//visibility:public"],
+)

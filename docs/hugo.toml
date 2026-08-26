@@ -1,0 +1,21 @@
+baseURL = "https://retail-cortex.github.io/ai-daily-brief/"
+languageCode = "en-us"
+title = "AI Daily Brief"
+theme = "book"
+
+# Book theme configuration
+[params]
+  BookTheme = "dark"
+  BookSearch = true
+  BookRepo = "https://github.com/retail-cortex/ai-daily-brief"
+  BookEditPath = "edit/main/docs/content"
+  BookDateFormat = "January 2, 2006"
+  BookSection = "*"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.tableOfContents]
+    startLevel = 2
+    endLevel = 4

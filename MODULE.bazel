@@ -49,3 +49,15 @@ use_repo(
     "io_gorm_gorm",
     "org_golang_x_oauth2",
 )
+
+# rules_hugo Documentation Engine
+bazel_dep(name = "rules_hugo", version = "0.3.0")
+git_override(
+    module_name = "rules_hugo",
+    remote = "https://github.com/retail-cortex/rules-hugo.git",
+    commit = "4710c8855aee048aa98f6b6be57723ae83084fcc",
+)
+bazel_dep(name = "rules_shell", version = "0.6.1")
+
+hugo_deps = use_extension("@rules_hugo//hugo:extensions.bzl", "hugo_deps")
+use_repo(hugo_deps, "hugo", "hugo_theme_book")
