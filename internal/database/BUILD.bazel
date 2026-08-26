@@ -21,6 +21,7 @@ go_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "@com_github_glebarez_sqlite//:sqlite",
+        "@io_gorm_driver_postgres//:postgres",
         "@io_gorm_gorm//:gorm",
         "@io_gorm_gorm//logger",
     ],

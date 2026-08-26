@@ -18,9 +18,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -42,9 +44,9 @@ type NewsItem struct {
 	Company   string       `gorm:"index" json:"company"`
 	Category  NewsCategory `gorm:"index" json:"category"`
 	Title     string       `json:"title"`
-	Summary   string       `json:"summary"`
+	Summary   string       `gorm:"type:text" json:"summary"`
 	Link      string       `gorm:"uniqueIndex" json:"link"`
-	RawSource string       `json:"raw_source"`
+	RawSource string       `gorm:"type:text" json:"raw_source"`
 	CreatedAt time.Time    `json:"created_at"`
 }
 
@@ -66,7 +68,7 @@ type RunLog struct {
 
 type Setting struct {
 	Key   string `gorm:"primaryKey" json:"key"`
-	Value string `json:"value"`
+	Value string `gorm:"type:text" json:"value"`
 }
 
 type ChatMessage struct {
@@ -82,23 +84,48 @@ type ChatMessage struct {
 
 var DB *gorm.DB
 
-func InitDB(customPath string) (*gorm.DB, error) {
-	dbDir := "data"
-	if err := os.MkdirAll(dbDir, 0700); err != nil {
-		return nil, err
+// InitDB initializes database connection to Google Cloud AlloyDB / PostgreSQL or local SQLite
+func InitDB(customPathOrDSN string) (*gorm.DB, error) {
+	dsn := customPathOrDSN
+	if dsn == "" {
+		if envAlloy := os.Getenv("ALLOYDB_DATABASE_URL"); envAlloy != "" {
+			dsn = envAlloy
+		} else if envDB := os.Getenv("DATABASE_URL"); envDB != "" {
+			dsn = envDB
+		}
 	}
 
-	dbPath := filepath.Join(dbDir, "ai_daily_brief.db")
-	if customPath != "" {
-		dbPath = customPath
+	var dialector gorm.Dialector
+	var dbType string
+
+	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") || strings.Contains(dsn, "host=") {
+		dialector = postgres.Open(dsn)
+		dbType = "Google Cloud AlloyDB / PostgreSQL"
+	} else {
+		dbPath := dsn
+		if dbPath == "" {
+			dbDir := "data"
+			_ = os.MkdirAll(dbDir, 0700)
+			dbPath = filepath.Join(dbDir, "ai_daily_brief.db")
+		}
+		dialector = sqlite.Open(dbPath)
+		dbType = "SQLite (" + dbPath + ")"
 	}
 
 	var err error
-	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+	DB, err = gorm.Open(dialector, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// Configure connection pooling for AlloyDB / PostgreSQL
+	sqlDB, err := DB.DB()
+	if err == nil {
+		sqlDB.SetMaxOpenConns(25)
+		sqlDB.SetMaxIdleConns(10)
+		sqlDB.SetConnMaxLifetime(15 * time.Minute)
 	}
 
 	// Auto-migrate tables
@@ -110,7 +137,7 @@ func InitDB(customPath string) (*gorm.DB, error) {
 	defaultSettings := map[string]string{
 		"cron_schedule":     "0 8 * * *",
 		"gemini_model":      "gemini-3.7-flash",
-		"gemini_auth_mode":  "api_key", // "api_key" or "vertex_adc"
+		"gemini_auth_mode":  "vertex_adc", // Cloud Run defaults to Vertex AI ADC
 		"gemini_api_key":    "",
 		"vertex_project_id": "",
 		"vertex_location":   "us-central1",
@@ -125,6 +152,6 @@ func InitDB(customPath string) (*gorm.DB, error) {
 		}
 	}
 
-	log.Printf("[Database] GORM SQLite initialized successfully at %s", dbPath)
+	log.Printf("[Database] GORM initialized successfully with %s", dbType)
 	return DB, nil
 }

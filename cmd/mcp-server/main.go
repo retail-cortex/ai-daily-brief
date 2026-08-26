@@ -27,12 +27,15 @@ import (
 func main() {
 	portFlag := flag.String("port", "", "Port to listen on (defaults to $PORT or 8080 for Cloud Run)")
 	stdioFlag := flag.Bool("stdio", false, "Run in stdio mode for local desktop MCP clients")
-	dbFlag := flag.String("db", "", "Path to SQLite database")
+	dbFlag := flag.String("db", "", "Path to SQLite database or AlloyDB / PostgreSQL DSN")
+	dsnFlag := flag.String("dsn", "", "Google Cloud AlloyDB / PostgreSQL DSN (e.g. postgres://user:pass@host:5432/dbname)")
 	flag.Parse()
 
 	cfg := config.LoadConfig()
 	dbPath := cfg.DatabasePath
-	if *dbFlag != "" {
+	if *dsnFlag != "" {
+		dbPath = *dsnFlag
+	} else if *dbFlag != "" {
 		dbPath = *dbFlag
 	}
 

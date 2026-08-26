@@ -45,24 +45,7 @@ use_repo(
     "com_github_puerkitobio_goquery",
     "com_github_robfig_cron_v3",
     "com_github_rrmcguinness_modenv",
+    "io_gorm_driver_postgres",
     "io_gorm_gorm",
     "org_golang_x_oauth2",
 )
-
-# Node / NPM / pnpm Configuration via rules_js
-bazel_dep(name = "rules_nodejs", version = "6.7.3")
-bazel_dep(name = "aspect_rules_js", version = "3.4.0")
-
-# Node toolchain setup
-node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
-node.toolchain(node_version = "22.12.0")
-use_repo(node, "nodejs_toolchains")
-
-# Translate Node package-lock.json automatically
-npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
-npm.npm_translate_lock(
-    name = "npm",
-    pnpm_lock = "//web:pnpm-lock.yaml",
-    lifecycle_hooks_exclude = ["better-sqlite3"],
-)
-use_repo(npm, "npm")

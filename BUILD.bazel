@@ -22,28 +22,21 @@ exports_files([
     "NOTICE",
     ".env.toml",
     "README.md",
-    "build/darwin/Info.plist",
-    "build/darwin/AppIcon.icns",
-    "build/darwin/Open_First_Time.command",
-    "build/linux/ai-daily-brief.desktop",
-    "build/windows/installer.nsi",
 ])
 
-# Shortcut alias to run the default daily brief binary
-alias(
-    name = "ai-daily-brief",
-    actual = "//cmd/ai-daily-brief",
-    visibility = ["//visibility:public"],
-)
-
-# Shortcut alias for ease of execution (bazel run //:run)
+# Default shortcut aliases to run the unified Cloud Run MCP & REST Server
 alias(
     name = "run",
-    actual = "//cmd/ai-daily-brief",
+    actual = "//cmd/mcp-server",
     visibility = ["//visibility:public"],
 )
 
-# Dedicated Cloud Run / Agent Control Plane MCP Server aliases
+alias(
+    name = "server",
+    actual = "//cmd/mcp-server",
+    visibility = ["//visibility:public"],
+)
+
 alias(
     name = "mcp-server",
     actual = "//cmd/mcp-server",
@@ -51,7 +44,7 @@ alias(
 )
 
 alias(
-    name = "run-mcp",
+    name = "ai-daily-brief",
     actual = "//cmd/mcp-server",
     visibility = ["//visibility:public"],
 )

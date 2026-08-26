@@ -1,2 +1,0 @@
-This is a temporary placeholder to satisfy Go embed during configuration generation.
-It will be overwritten by the React web build assets during the Bazel build.

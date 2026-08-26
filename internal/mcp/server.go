@@ -25,11 +25,20 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"ai-daily-brief/internal/agent"
+	"ai-daily-brief/internal/crawler"
+	"ai-daily-brief/internal/database"
+	"ai-daily-brief/internal/mailer"
+	"ai-daily-brief/internal/security"
+
 	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
 )
 
@@ -37,6 +46,8 @@ import (
 type Server struct {
 	Handler    *Handler
 	Router     *gin.Engine
+	DB         *gorm.DB
+	Cron       *cron.Cron
 	sseClients map[string]chan string
 	mu         sync.RWMutex
 }
@@ -62,11 +73,49 @@ func NewServer(db *gorm.DB) *Server {
 	s := &Server{
 		Handler:    NewHandler(db),
 		Router:     r,
+		DB:         db,
+		Cron:       cron.New(),
 		sseClients: make(map[string]chan string),
 	}
 
 	s.setupRoutes()
+	s.setupCron()
 	return s
+}
+
+func (s *Server) setupCron() {
+	var sCron database.Setting
+	schedule := "0 8 * * *"
+	if err := s.DB.First(&sCron, "key = ?", "cron_schedule").Error; err == nil && sCron.Value != "" {
+		schedule = sCron.Value
+	}
+
+	_, err := s.Cron.AddFunc(schedule, func() {
+		log.Println("[Cron] Executing scheduled crawl batch run...")
+		res, err := crawler.ExecuteBatchRun(s.DB)
+		if err != nil {
+			log.Printf("[Cron] Crawler error: %v", err)
+			return
+		}
+		log.Printf("[Cron] Run complete. Inserted %d items.", res.NewItemsInserted)
+
+		// Trigger daily executive TL;DR synthesis
+		var items []database.NewsItem
+		s.DB.Order("pub_date DESC").Limit(25).Find(&items)
+		tldr, err := agent.GenerateDailyTLDR(s.DB, items)
+		if err != nil {
+			log.Printf("[Cron] TL;DR generation error: %v", err)
+		} else {
+			log.Printf("[Cron] Daily TL;DR generated successfully (%d bytes)", len(tldr))
+		}
+	})
+
+	if err != nil {
+		log.Printf("[Cron] Error scheduling cron: %v", err)
+	} else {
+		s.Cron.Start()
+		log.Printf("[Cron] Background crawler scheduler started (Schedule: %s)", schedule)
+	}
 }
 
 func (s *Server) setupRoutes() {
@@ -80,7 +129,7 @@ func (s *Server) setupRoutes() {
 		})
 	})
 
-	// 2. Direct JSON-RPC POST Endpoint (/mcp and /api/mcp)
+	// 2. Direct JSON-RPC POST Endpoint (/mcp)
 	mcpHandler := func(c *gin.Context) {
 		var req JSONRPCRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -135,7 +184,6 @@ func (s *Server) setupRoutes() {
 		c.Writer.Header().Set("Connection", "keep-alive")
 		c.Writer.Header().Set("Transfer-Encoding", "chunked")
 
-		// Send endpoint registration event per MCP SSE spec
 		endpointURL := fmt.Sprintf("/message?session_id=%s", sessionID)
 		fmt.Fprintf(c.Writer, "event: endpoint\ndata: %s\n\n", endpointURL)
 		c.Writer.Flush()
@@ -175,9 +223,205 @@ func (s *Server) setupRoutes() {
 			ch <- string(respBytes)
 			c.JSON(http.StatusAccepted, gin.H{"status": "accepted"})
 		} else {
-			// Direct response fallback
 			c.JSON(http.StatusOK, resp)
 		}
+	})
+
+	// 5. REST API Group (/api/*)
+	api := s.Router.Group("/api")
+	{
+		// Articles List
+		api.GET("/items", func(c *gin.Context) {
+			search := c.Query("search")
+			company := c.Query("company")
+			category := c.Query("category")
+			limitStr := c.Query("limit")
+
+			query := s.DB.Model(&database.NewsItem{})
+			if company != "" && company != "All" {
+				query = query.Where("company LIKE ?", "%"+company+"%")
+			}
+			if category != "" && category != "All" {
+				query = query.Where("category = ?", category)
+			}
+			if search != "" {
+				term := "%" + search + "%"
+				query = query.Where("title LIKE ? OR summary LIKE ? OR company LIKE ?", term, term, term)
+			}
+
+			query = query.Order("pub_date DESC, created_at DESC")
+			if limitStr != "" {
+				if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+					query = query.Limit(l)
+				}
+			}
+
+			var items []database.NewsItem
+			if err := query.Find(&items).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"success": true, "count": len(items), "items": items})
+		})
+
+		// Crawl Trigger
+		api.POST("/batch/run", func(c *gin.Context) {
+			res, err := crawler.ExecuteBatchRun(s.DB)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error(), "result": res})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"success": true, "result": res})
+		})
+
+		// Crawl Runs History
+		api.GET("/runs", func(c *gin.Context) {
+			var runs []database.RunLog
+			s.DB.Order("created_at DESC").Limit(20).Find(&runs)
+			c.JSON(http.StatusOK, gin.H{"success": true, "runs": runs})
+		})
+
+		// Newsletter Preview
+		api.POST("/newsletter/preview", func(c *gin.Context) {
+			var items []database.NewsItem
+			s.DB.Order("pub_date DESC").Limit(30).Find(&items)
+			dateStr := time.Now().Format("Monday, Jan 02, 2006")
+			htmlBody := mailer.GenerateNewsletterHTML(items, dateStr)
+			c.JSON(http.StatusOK, gin.H{"success": true, "html": htmlBody})
+		})
+
+		// Agent Settings
+		api.GET("/settings", func(c *gin.Context) {
+			var settings []database.Setting
+			s.DB.Find(&settings)
+			setMap := make(map[string]string)
+			for _, st := range settings {
+				if st.Key == "gemini_api_key" && st.Value != "" {
+					setMap[st.Key] = "••••••••••••••••"
+				} else {
+					setMap[st.Key] = st.Value
+				}
+			}
+			c.JSON(http.StatusOK, gin.H{"success": true, "settings": setMap})
+		})
+
+		api.POST("/settings", func(c *gin.Context) {
+			var req map[string]interface{}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
+				return
+			}
+
+			for k, v := range req {
+				valStr := strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(v.(string), "\n", ""), "\r", ""))
+				if k == "gemini_api_key" {
+					if valStr == "••••••••••••••••" {
+						continue
+					}
+					if valStr != "" {
+						encrypted, err := security.Encrypt(valStr)
+						if err != nil {
+							c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Encryption failed: " + err.Error()})
+							return
+						}
+						valStr = encrypted
+					}
+				}
+				s.DB.Save(&database.Setting{Key: k, Value: valStr})
+			}
+			c.JSON(http.StatusOK, gin.H{"success": true, "message": "Settings saved successfully"})
+		})
+
+		// Agent Model Discovery
+		api.GET("/agent/models", func(c *gin.Context) {
+			models := agent.FetchAvailableModels(s.DB)
+			c.JSON(http.StatusOK, gin.H{"success": true, "models": models})
+		})
+
+		// Agent Chat
+		api.POST("/agent/chat", func(c *gin.Context) {
+			var req struct {
+				SessionID string `json:"session_id"`
+				Message   string `json:"message"`
+				ArticleID string `json:"article_id"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.Message) == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Message is required"})
+				return
+			}
+			res, err := agent.GenerateChatResponse(s.DB, req.SessionID, req.Message, req.ArticleID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"success": true, "result": res})
+		})
+
+		// Agent Chat History
+		api.GET("/agent/history", func(c *gin.Context) {
+			sessionID := c.Query("session_id")
+			var history []database.ChatMessage
+			query := s.DB.Order("created_at ASC")
+			if sessionID != "" {
+				query = query.Where("session_id = ?", sessionID)
+			} else {
+				query = query.Limit(50)
+			}
+			query.Find(&history)
+			c.JSON(http.StatusOK, gin.H{"success": true, "history": history})
+		})
+
+		api.DELETE("/agent/history", func(c *gin.Context) {
+			sessionID := c.Query("session_id")
+			if sessionID != "" {
+				s.DB.Where("session_id = ?", sessionID).Delete(&database.ChatMessage{})
+			} else {
+				s.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&database.ChatMessage{})
+			}
+			c.JSON(http.StatusOK, gin.H{"success": true, "message": "History cleared"})
+		})
+
+		// TL;DR Generation
+		api.POST("/agent/tldr", func(c *gin.Context) {
+			var items []database.NewsItem
+			s.DB.Order("pub_date DESC").Limit(25).Find(&items)
+			tldr, err := agent.GenerateDailyTLDR(s.DB, items)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"success": true, "tldr": tldr})
+		})
+
+		// Test Connection
+		api.POST("/agent/test-connection", func(c *gin.Context) {
+			model := c.Query("model")
+			res, err := agent.GenerateRawContentWithModel(s.DB, model, "You are a test validator.", "Respond with exactly: 'Gemini connection successful!'")
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"error":   err.Error(),
+					"model":   model,
+				})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": res,
+				"model":   model,
+			})
+		})
+
+		// Multimodal Live Bidi WebSocket
+		api.GET("/agent/live", func(c *gin.Context) {
+			agent.HandleBidiWebSocket(s.DB, c.Writer, c.Request)
+		})
+	}
+
+	// Root Level WebSocket Live Route
+	s.Router.GET("/ws/live", func(c *gin.Context) {
+		agent.HandleBidiWebSocket(s.DB, c.Writer, c.Request)
 	})
 }
 
