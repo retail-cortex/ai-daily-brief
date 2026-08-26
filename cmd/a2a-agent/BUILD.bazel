@@ -76,3 +76,17 @@ pkg_tar(
     extension = "tar.gz",
     visibility = ["//visibility:public"],
 )
+
+pkg_tar(
+    name = "pkg_a2a_agent_linux_arm64",
+    srcs = [
+        ":a2a_agent_linux_arm64",
+        "//:LICENSE",
+        "//:NOTICE",
+        "//:README.md",
+        "//configs/agent:files",
+    ],
+    out = "ai-daily-brief-a2a-agent-linux-arm64.tar.gz",
+    extension = "tar.gz",
+    visibility = ["//visibility:public"],
+)

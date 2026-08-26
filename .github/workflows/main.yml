@@ -35,7 +35,16 @@ jobs:
 
       - name: "Build Cloud Run Container Binaries & Hugo Documentation"
         run: |
-          bazel build //cmd/mcp-server:mcp-server //cmd/mcp-server:mcp_server_linux_amd64 //cmd/mcp-server:mcp_server_linux_arm64 //cmd/mcp-server:pkg_mcp_linux_amd64 //cmd/a2a-agent:a2a-agent //cmd/a2a-agent:a2a_agent_linux_amd64 //cmd/a2a-agent:a2a_agent_linux_arm64 //cmd/a2a-agent:pkg_a2a_agent_linux_amd64 //docs:docs
+          bazel build \
+            //cmd/mcp-server:mcp_server_linux_amd64 \
+            //cmd/mcp-server:mcp_server_linux_arm64 \
+            //cmd/mcp-server:pkg_mcp_linux_amd64 \
+            //cmd/mcp-server:pkg_mcp_linux_arm64 \
+            //cmd/a2a-agent:a2a_agent_linux_amd64 \
+            //cmd/a2a-agent:a2a_agent_linux_arm64 \
+            //cmd/a2a-agent:pkg_a2a_agent_linux_amd64 \
+            //cmd/a2a-agent:pkg_a2a_agent_linux_arm64 \
+            //docs:docs
 
   release:
     name: Release
@@ -50,12 +59,30 @@ jobs:
       - name: Bazel Setup
         uses: bazelbuild/setup-bazelisk@v3
 
-      - name: Build Cloud Run Distribution Artifacts
+      - name: Build and Package Cloud Run Binaries
         run: |
           mkdir release
-          bazel build //cmd/mcp-server:pkg_mcp_linux_amd64 //cmd/a2a-agent:pkg_a2a_agent_linux_amd64
+          bazel build \
+            //cmd/mcp-server:mcp_server_linux_amd64 \
+            //cmd/mcp-server:mcp_server_linux_arm64 \
+            //cmd/mcp-server:pkg_mcp_linux_amd64 \
+            //cmd/mcp-server:pkg_mcp_linux_arm64 \
+            //cmd/a2a-agent:a2a_agent_linux_amd64 \
+            //cmd/a2a-agent:a2a_agent_linux_arm64 \
+            //cmd/a2a-agent:pkg_a2a_agent_linux_amd64 \
+            //cmd/a2a-agent:pkg_a2a_agent_linux_arm64
+
+          # Copy standalone executable binaries
+          cp $(bazel cquery //cmd/mcp-server:mcp_server_linux_amd64 --output=files) release/mcp-server-linux-amd64
+          cp $(bazel cquery //cmd/mcp-server:mcp_server_linux_arm64 --output=files) release/mcp-server-linux-arm64
+          cp $(bazel cquery //cmd/a2a-agent:a2a_agent_linux_amd64 --output=files) release/a2a-agent-linux-amd64
+          cp $(bazel cquery //cmd/a2a-agent:a2a_agent_linux_arm64 --output=files) release/a2a-agent-linux-arm64
+
+          # Copy packaged tarballs
           cp $(bazel cquery //cmd/mcp-server:pkg_mcp_linux_amd64 --output=files) release/
+          cp $(bazel cquery //cmd/mcp-server:pkg_mcp_linux_arm64 --output=files) release/
           cp $(bazel cquery //cmd/a2a-agent:pkg_a2a_agent_linux_amd64 --output=files) release/
+          cp $(bazel cquery //cmd/a2a-agent:pkg_a2a_agent_linux_arm64 --output=files) release/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -64,7 +91,7 @@ jobs:
         with:
           tag_name: "release-${{ github.sha }}"
           files: |
-            release/*.tar.gz
+            release/*
           generate_release_notes: true
 
   deploy-docs:
