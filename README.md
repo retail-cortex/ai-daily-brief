@@ -83,21 +83,57 @@ The **Daily Executive Digest** tab allows you to preview, copy, or download the 
 
 ---
 
+## 🛡️ Cloud Run MCP Server (`cmd/mcp-server`)
+
+The application includes a dedicated **Model Context Protocol (MCP)** server designed for deployment to **Google Cloud Run**, acting as an agentic control plane for **Vertex AI Agent Engine**, other **Cloud Run agents**, or desktop clients (Antigravity, Claude, Cursor).
+
+All tool outputs are formatted using **A2UI (Agent-to-UI)** card structures with contextual action triggers.
+
+### Running the MCP Server Locally
+
+```bash
+# Start the HTTP MCP server on port 8080
+bazel run //:mcp-server -- -port 8080
+
+# Or run in stdio mode for local desktop agent integrations
+bazel run //:mcp-server -- -stdio
+```
+
+### Endpoints (Cloud Run Ready)
+
+- `POST /mcp` - Direct JSON-RPC 2.0 endpoint.
+- `GET /sse` & `POST /message` - MCP Server-Sent Events (SSE) streaming transport.
+- `GET /healthz` - Cloud Run container readiness & liveness probe.
+
+### Supported MCP Tools
+
+| Tool | Description | A2UI Output |
+| :--- | :--- | :--- |
+| `list_articles` | List indexed items filtered by category, company, or query. | Formatted A2UI article card deck with `[⚡ Load Article Context]` action buttons. |
+| `get_article_context` | Deep-fetches and extracts full webpage body text. | Complete grounding inspector card with source metadata and suggested prompts. |
+| `generate_tldr` | Generates strategic 3-tier executive briefing via Vertex AI ADC. | Structured markdown briefing card. |
+| `trigger_crawl` | Runs live sub-second crawl across all 5 streams. | Batch crawler telemetry card with deduplication metrics. |
+| `get_newsletter` | Retrieves today's formatted daily intelligence digest. | Executive markdown newsletter view. |
+| `agent_chat` | Grounded interactive research chat with Gemini 3.7. | Dialogue card with source citations. |
+| `get_system_status` | Inspects database count, active model, and auth mode. | Telemetry card. |
+
+---
+
 ## 📁 Directory Structure
 
 ```text
 ├── cmd/
-│   └── ai-daily-brief/
-│       └── main.go       # Main entry point & CLI handler
+│   ├── ai-daily-brief/   # Standalone web dashboard & launcher
+│   └── mcp-server/       # Dedicated Cloud Run MCP Server control plane
 ├── internal/
-│   ├── agent/            # Gemini client & content enricher
+│   ├── agent/            # Gemini & Vertex AI ADC client
 │   ├── config/           # Environment & TOML config loader
 │   ├── crawler/          # Parallel goroutine news crawlers
 │   ├── database/         # SQLite GORM schema & db connection
 │   ├── mailer/           # HTML email digest builder
+│   ├── mcp/              # MCP JSON-RPC protocol & A2UI card engine
 │   └── server/           # Gin REST API & static web router
 ├── web/                  # React 19 + TypeScript + Tailwind frontend
-├── patches/              # Bzlmod patches for external dependencies
 ├── BUILD.bazel           # Root Bazel build definitions
 ├── MODULE.bazel          # Bazel 9 Bzlmod dependency configuration
 └── BUILD.md              # Hermetic Bazel compilation guide

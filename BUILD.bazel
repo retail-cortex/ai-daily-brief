@@ -42,3 +42,16 @@ alias(
     actual = "//cmd/ai-daily-brief",
     visibility = ["//visibility:public"],
 )
+
+# Dedicated Cloud Run / Agent Control Plane MCP Server aliases
+alias(
+    name = "mcp-server",
+    actual = "//cmd/mcp-server",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "run-mcp",
+    actual = "//cmd/mcp-server",
+    visibility = ["//visibility:public"],
+)
