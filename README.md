@@ -1,87 +1,72 @@
-# ⚡ AI Daily Brief (Cloud Run MCP & REST Server)
+# ⚡ AI Daily Brief
 
-A high-performance **Model Context Protocol (MCP)** and **REST Control Plane Server** powered by **Go, Gin, GORM, Google Cloud AlloyDB for PostgreSQL, and Vertex AI**.
+[![Documentation](https://img.shields.io/badge/docs-GitHub_Pages-blue.svg)](https://retail-cortex.github.io/ai-daily-brief/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Bazel](https://img.shields.io/badge/build-Bazel_9-green.svg)](https://bazel.build)
 
-It aggregates frontier model announcements, arXiv research papers, AI venture capital deals, GPU datacenter infrastructure, and open-source tooling into structured **A2UI (Agent-to-UI)** card decks, executive briefings, and automated daily digests.
+A high-performance **Model Context Protocol (MCP)** control plane and **Agent-to-Agent (A2A)** intelligence system powered by **Go, Gin, GORM, Google Cloud AlloyDB for PostgreSQL, and Google Vertex AI**.
+
+It continuously aggregates and synthesizes frontier model announcements, arXiv research papers, AI venture capital deals, GPU datacenter infrastructure, and open-source tooling into structured **A2UI (Agent-to-UI)** card decks, executive briefings, and automated daily digests.
 
 ---
 
-## 🎯 Architecture & Key Features
+## 📖 Complete Documentation
 
-- **Google Cloud AlloyDB for PostgreSQL Backend**: Enterprise-grade database storage with connection pooling and high-throughput query caching. Falls back seamlessly to SQLite for local development and unit testing.
-- **Vertex AI ADC & Gemini 3.7 Control Plane**:
-  - **Native ADC Integration**: Authenticates directly via Application Default Credentials (`gcloud auth application-default login` or Cloud Run metadata server) with zero API keys required.
-  - **Interactive Research Agent**: Context-grounded dialogue with real-time web scraping and paper extraction.
-  - **Automated Daily TL;DR**: Strategic 3-tier executive briefings across all 5 streams.
-- **Model Context Protocol (MCP) + A2UI Formatter**:
-  - Exposes standard JSON-RPC 2.0 tools with interactive **A2UI card decks** and action buttons (`[⚡ Load Article Context: <id>]`).
-  - Compatible with **Vertex AI Agent Engine**, Cloud Run inter-agent callers, Antigravity, Claude Desktop, and Cursor.
-- **5 Intelligence Streams**:
-  - 🔵 **Frontier Models**: Google (Gemini 3.7 / 2.0), Anthropic (Claude), OpenAI (GPT-5 / o3 / Sora), X AI (Grok), Meta AI.
-  - ☁️ **Google Cloud**: Official release notes, Vertex AI infrastructure, AI Hypercomputer, TPUs, and GKE.
-  - 🟣 **AI Research Papers**: Multi-category arXiv API (`cs.CL`, `cs.AI`, `cs.CV`, `cs.LG`), Hugging Face Daily Papers, and academic benchmarks.
-  - 🟢 **AI Business & Infra**: Funding rounds, datacenter buildouts (Nvidia Blackwell, Colossus), hyperscaler cloud deals.
-  - 🟠 **OSS & Tooling**: Open weights (DeepSeek, Llama, Qwen, Mistral), local inference runtimes (vLLM, Ollama), fine-tuning harnesses.
-- **Sub-Second Parallel Crawling**: Concurrent goroutines crawl all sources in parallel in **< 1 second** (`~900ms`) with SHA-256 deduplication.
+For detailed architecture guides, MCP tool specifications, Cloud Run deployment manifests, and REST API references, visit the **official documentation site**:
+
+👉 **[https://retail-cortex.github.io/ai-daily-brief/](https://retail-cortex.github.io/ai-daily-brief/)**
+
+### Quick Links to Documentation
+- 🚀 **[Getting Started](https://retail-cortex.github.io/ai-daily-brief/docs/getting-started/)**: Quickstart, running locally with Bazel, and environment profile switching (`.env.test.toml` vs `.env.integration.toml`).
+- 🏛️ **[System Architecture](https://retail-cortex.github.io/ai-daily-brief/docs/architecture/)**: Parallel goroutine crawler (<900ms execution), SHA-256 deduplication, dynamic HTML extraction, and dual protocol plane.
+- 🤖 **[Model Context Protocol (MCP) & A2UI](https://retail-cortex.github.io/ai-daily-brief/docs/mcp-server/)**: JSON-RPC 2.0 tool definitions, A2UI card schemas, and Server-Sent Events (SSE) streaming.
+- 🤖 **[Agent-to-Agent (A2A) Service](https://retail-cortex.github.io/ai-daily-brief/docs/a2a-agent/)**: Autonomous Cloud Run agent service consuming the MCP control plane with Google ADK / Gemini workflows.
+- ☁️ **[Google Cloud Run Deployment](https://retail-cortex.github.io/ai-daily-brief/docs/cloud-run/)**: Cross-compiling Linux container binaries, Distroless images, `gcloud run deploy`, and container probes (`/healthz`).
+- 💾 **[Google Cloud AlloyDB](https://retail-cortex.github.io/ai-daily-brief/docs/alloydb/)**: AlloyDB for PostgreSQL connection strings, production connection pooling, GORM auto-migrations, and environment profiles.
+- 📡 **[REST API Reference](https://retail-cortex.github.io/ai-daily-brief/docs/rest-api/)**: Complete endpoint reference for all HTTP routes and the Multimodal Live Bidi WebSocket (`/ws/live`).
 
 ---
 
 ## 🚀 Quick Start (Running via Bazel)
 
 ```bash
-# Run the unified MCP & REST server locally on port 8080
-bazel run //:run -- -port 8080
+# 1. Run the unified MCP Server (Port 8080)
+bazel run //:run
 
-# Or connect to Google Cloud AlloyDB / PostgreSQL directly:
-bazel run //:run -- -dsn "postgres://user:pass@alloydb-ip:5432/ai_daily_brief?sslmode=disable"
+# 2. Run the autonomous A2A Agent (Port 8081)
+bazel run //:run-agent
+
+# 3. Serve the live Hugo documentation website (Port 1313)
+bazel run //:serve-docs
 ```
 
 ---
 
-## 📡 Cloud Run Deployment & Endpoints
-
-The server binds to `$PORT` (default `8080`) and exposes:
-
-- `GET  /healthz` - Cloud Run container readiness & liveness probe.
-- `POST /mcp` - Direct MCP JSON-RPC 2.0 endpoint.
-- `GET  /sse` & `POST /message` - MCP Server-Sent Events (SSE) streaming transport.
-- `GET  /api/items` - Paginated and filtered intelligence item queries.
-- `POST /api/batch/run` - Trigger parallel crawler batch execution.
-- `GET  /api/agent/models` - Discover available Gemini & Vertex AI models.
-- `POST /api/agent/chat` - Context-grounded interactive LLM chat.
-- `POST /api/agent/tldr` - Executive daily strategic synthesis.
-- `GET  /ws/live` - Multimodal Live Bidi WebSocket endpoint.
-
----
-
-## 🛠️ Supported MCP Tools
-
-| Tool | Description | A2UI Output |
-| :--- | :--- | :--- |
-| `list_articles` | List indexed items filtered by category, company, or query. | Formatted A2UI article card deck with `[⚡ Load Article Context]` action buttons. |
-| `get_article_context` | Deep-fetches and extracts full webpage body text. | Complete grounding inspector card with source metadata and suggested prompts. |
-| `generate_tldr` | Generates strategic 3-tier executive briefing via Vertex AI ADC. | Structured markdown briefing card. |
-| `trigger_crawl` | Runs live sub-second crawl across all 5 streams. | Batch crawler telemetry card with deduplication metrics. |
-| `get_newsletter` | Retrieves today's formatted daily intelligence digest. | Executive markdown newsletter view. |
-| `agent_chat` | Grounded interactive research chat with Gemini 3.7. | Dialogue card with source citations. |
-| `get_system_status` | Inspects database count, active model, and auth mode. | Telemetry card. |
-
----
-
-## 📁 Directory Structure
+## 📁 Repository Layout
 
 ```text
 ├── cmd/
-│   └── mcp-server/       # Dedicated Cloud Run MCP Server & REST entrypoint
+│   ├── a2a-agent/        # Cloud Run Agent-to-Agent (A2A) service entrypoint
+│   └── mcp-server/       # Cloud Run MCP & REST control plane entrypoint
+├── configs/
+│   ├── agent/            # A2A agent configuration profiles (modenv)
+│   └── mcp/              # MCP server configuration profiles (modenv)
+├── docs/                 # Static documentation site powered by rules_hugo
 ├── internal/
-│   ├── agent/            # Gemini & Vertex AI ADC client
-│   ├── config/           # Environment & TOML config loader
-│   ├── crawler/          # Parallel goroutine news crawlers
+│   ├── a2a/              # A2A agent engine, MCP client, and HTTP server
+│   ├── agent/            # Gemini 3.7 & Vertex AI ADC client
+│   ├── config/           # Modenv environment profile loader
+│   ├── crawler/          # Parallel goroutine intelligence scrapers
 │   ├── database/         # AlloyDB / PostgreSQL & SQLite GORM layer
 │   ├── mailer/           # HTML email digest builder
 │   ├── mcp/              # MCP JSON-RPC protocol, REST APIs & A2UI engine
 │   └── security/         # Stable AES-256 key management
-├── BUILD.bazel           # Root Bazel build definitions
-├── MODULE.bazel          # Bazel 9 Bzlmod dependency configuration
-└── BUILD.md              # Hermetic Bazel compilation guide
+├── BUILD.bazel           # Root Bazel build definitions & aliases
+└── MODULE.bazel          # Bazel 9 Bzlmod dependency configuration
 ```
+
+---
+
+## 📄 License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for details.
