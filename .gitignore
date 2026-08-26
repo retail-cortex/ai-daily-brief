@@ -23,11 +23,15 @@ data/
 
 # Environment Variables & Secrets
 .env
-.env.*.toml
-!.env.example
+.env.local.toml
+*.local.toml
 *.key
 *.pem
 *.p12
+
+# Explicitly allow configuration files in configs/
+!configs/**
+!configs/**/.*.toml
 
 # Local Go Binaries
 bin/

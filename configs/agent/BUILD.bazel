@@ -14,12 +14,12 @@
 
 filegroup(
     name = "files",
-    srcs = [
-        ".env.integration.toml",
-        ".env.test.toml",
-        ".env.toml",
-        "example-integration.toml",
-        "example-test.toml",
-    ],
+    srcs = glob(
+        [
+            "*.toml",
+            ".*.toml",
+        ],
+        allow_empty = True,
+    ),
     visibility = ["//visibility:public"],
 )
