@@ -15,22 +15,34 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "config",
-    srcs = ["config.go"],
-    importpath = "ai-daily-brief/internal/config",
+    name = "a2a",
+    srcs = [
+        "agent.go",
+        "client.go",
+        "server.go",
+    ],
+    importpath = "ai-daily-brief/internal/a2a",
     visibility = ["//:__subpackages__"],
-    deps = ["@com_github_rrmcguinness_modenv//pkg/modenv"],
+    deps = [
+        "//internal/config",
+        "@com_github_gin_gonic_gin//:gin",
+    ],
 )
 
 go_test(
-    name = "config_test",
-    srcs = ["config_test.go"],
+    name = "a2a_test",
+    srcs = ["a2a_test.go"],
     data = [
         "//configs/agent:files",
         "//configs/mcp:files",
     ],
-    embed = [":config"],
+    embed = [":a2a"],
     env = {
-        "MODENV_PREFIX": "configs/mcp",
+        "MODENV_PREFIX": "configs/agent",
     },
+    deps = [
+        "//internal/config",
+        "//internal/database",
+        "//internal/mcp",
+    ],
 )

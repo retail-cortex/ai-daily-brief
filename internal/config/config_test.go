@@ -46,3 +46,29 @@ func TestGetDatabaseDSN_Resolution(t *testing.T) {
 		t.Errorf("Expected DatabasePath, got '%s'", dsn)
 	}
 }
+
+func TestLoadConfig_MCP(t *testing.T) {
+	cfg := LoadConfig()
+	if cfg == nil {
+		t.Fatal("LoadConfig returned nil")
+	}
+	if cfg.Port == "" {
+		t.Error("Expected Port to be populated")
+	}
+	if cfg.Gemini.Model == "" {
+		t.Error("Expected Gemini.Model to be populated")
+	}
+}
+
+func TestLoadAgentConfig_A2A(t *testing.T) {
+	agentCfg := LoadAgentConfig()
+	if agentCfg == nil {
+		t.Fatal("LoadAgentConfig returned nil")
+	}
+	if agentCfg.AgentName == "" {
+		t.Error("Expected AgentName to be populated")
+	}
+	if agentCfg.MCPServerURL == "" {
+		t.Error("Expected MCPServerURL to be populated")
+	}
+}

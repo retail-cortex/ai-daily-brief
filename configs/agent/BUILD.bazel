@@ -12,25 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_go//go:def.bzl", "go_library", "go_test")
-
-go_library(
-    name = "config",
-    srcs = ["config.go"],
-    importpath = "ai-daily-brief/internal/config",
-    visibility = ["//:__subpackages__"],
-    deps = ["@com_github_rrmcguinness_modenv//pkg/modenv"],
-)
-
-go_test(
-    name = "config_test",
-    srcs = ["config_test.go"],
-    data = [
-        "//configs/agent:files",
-        "//configs/mcp:files",
+filegroup(
+    name = "files",
+    srcs = [
+        ".env.integration.toml",
+        ".env.test.toml",
+        ".env.toml",
     ],
-    embed = [":config"],
-    env = {
-        "MODENV_PREFIX": "configs/mcp",
-    },
+    visibility = ["//visibility:public"],
 )

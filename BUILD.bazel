@@ -20,9 +20,6 @@ gazelle(name = "gazelle")
 exports_files([
     "LICENSE",
     "NOTICE",
-    ".env.toml",
-    ".env.test.toml",
-    ".env.integration.toml",
     "README.md",
 ])
 
@@ -48,6 +45,25 @@ alias(
 alias(
     name = "ai-daily-brief",
     actual = "//cmd/mcp-server",
+    visibility = ["//visibility:public"],
+)
+
+# Shortcut aliases to run the Cloud Run A2A Agent
+alias(
+    name = "agent",
+    actual = "//cmd/a2a-agent",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "run-agent",
+    actual = "//cmd/a2a-agent",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "a2a-agent",
+    actual = "//cmd/a2a-agent",
     visibility = ["//visibility:public"],
 )
 
