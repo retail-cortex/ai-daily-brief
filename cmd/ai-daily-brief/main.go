@@ -99,25 +99,31 @@ func main() {
 	if portVal == "3001" && cfg.Port != "" {
 		portVal = cfg.Port
 	}
-	addr := fmt.Sprintf("0.0.0.0:%s", portVal)
 
-	// Auto-open browser if running interactively
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", portVal))
+	if err != nil {
+		// If default port is busy, attempt fallback port 3002
+		log.Printf("⚠️ Port %s is already in use (%v). Attempting fallback port 3002...", portVal, err)
+		portVal = "3002"
+		listener, err = net.Listen("tcp", fmt.Sprintf("0.0.0.0:%s", portVal))
+		if err != nil {
+			log.Fatalf("Fatal: Unable to bind to port %s: %v", portVal, err)
+		}
+	}
+
+	// Auto-open browser to the verified listening port
 	if !*noBrowser {
-		go func() {
-			time.Sleep(1 * time.Second)
-			openBrowser(fmt.Sprintf("http://localhost:%s", portVal))
-		}()
+		go func(p string) {
+			time.Sleep(500 * time.Millisecond)
+			openBrowser(fmt.Sprintf("http://localhost:%s", p))
+		}(portVal)
 	}
 
 	log.Printf("🚀 Unified Go Server listening on http://localhost:%s", portVal)
-	if err := srv.Router.Run(addr); err != nil && err != http.ErrServerClosed {
-		// Try fallback port if in use
-		if _, ok := err.(*net.OpError); ok {
-			fallbackAddr := "0.0.0.0:3002"
-			log.Printf("Port %s busy, falling back to http://localhost:3002", portVal)
-			_ = srv.Router.Run(fallbackAddr)
-		} else {
-			log.Fatalf("Fatal server error: %v", err)
-		}
+	httpServer := &http.Server{
+		Handler: srv.Router,
+	}
+	if err := httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Fatal server error: %v", err)
 	}
 }
