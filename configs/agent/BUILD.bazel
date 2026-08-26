@@ -18,6 +18,8 @@ filegroup(
         ".env.integration.toml",
         ".env.test.toml",
         ".env.toml",
+        "example-integration.toml",
+        "example-test.toml",
     ],
     visibility = ["//visibility:public"],
 )
