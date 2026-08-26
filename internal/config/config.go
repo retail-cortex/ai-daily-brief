@@ -24,7 +24,23 @@ type Config struct {
 	Port         string       `toml:"port"`
 	CronSchedule string       `toml:"cron_schedule"`
 	DatabasePath string       `toml:"database_path"`
+	DatabaseURL  string       `toml:"database_url"`
+	AlloyDBURL   string       `toml:"alloydb_url"`
 	Gemini       GeminiConfig `toml:"gemini"`
+}
+
+// GetDatabaseDSN returns the active database connection string prioritizing AlloyDB / PostgreSQL URLs
+func (c *Config) GetDatabaseDSN() string {
+	if c.AlloyDBURL != "" {
+		return c.AlloyDBURL
+	}
+	if c.DatabaseURL != "" {
+		return c.DatabaseURL
+	}
+	if c.DatabasePath != "" {
+		return c.DatabasePath
+	}
+	return "data/ai_daily_brief.db"
 }
 
 type GeminiConfig struct {
@@ -44,12 +60,12 @@ func LoadConfig() *Config {
 		log.Printf("[Config] Error loading modenv configuration: %v. Using defaults.", err)
 		// Fallback defaults
 		AppConfig = &Config{
-			Port:         "3001",
+			Port:         "8080",
 			CronSchedule: "0 8 * * *",
 			DatabasePath: "data/ai_daily_brief.db",
 			Gemini: GeminiConfig{
 				Model:          "gemini-3.7-flash",
-				AuthMode:       "api_key",
+				AuthMode:       "vertex_adc",
 				VertexLocation: "us-central1",
 			},
 		}

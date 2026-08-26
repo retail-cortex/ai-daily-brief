@@ -21,6 +21,8 @@ exports_files([
     "LICENSE",
     "NOTICE",
     ".env.toml",
+    ".env.test.toml",
+    ".env.integration.toml",
     "README.md",
 ])
 

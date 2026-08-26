@@ -32,7 +32,7 @@ func main() {
 	flag.Parse()
 
 	cfg := config.LoadConfig()
-	dbPath := cfg.DatabasePath
+	dbPath := cfg.GetDatabaseDSN()
 	if *dsnFlag != "" {
 		dbPath = *dsnFlag
 	} else if *dbFlag != "" {

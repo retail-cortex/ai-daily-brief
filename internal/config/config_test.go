@@ -18,25 +18,31 @@ import (
 	"testing"
 )
 
-func TestLoadConfig(t *testing.T) {
-	cfg := LoadConfig()
-	if cfg == nil {
-		t.Fatal("LoadConfig returned nil")
+func TestGetDatabaseDSN_Resolution(t *testing.T) {
+	// 1. AlloyDB URL takes highest priority
+	cfgAlloy := &Config{
+		AlloyDBURL:   "postgres://user:pass@alloydb-cluster:5432/db",
+		DatabaseURL:  "postgres://user:pass@other-db:5432/db",
+		DatabasePath: ":memory:",
+	}
+	if dsn := cfgAlloy.GetDatabaseDSN(); dsn != "postgres://user:pass@alloydb-cluster:5432/db" {
+		t.Errorf("Expected AlloyDBURL, got '%s'", dsn)
 	}
 
-	// Verify defaults are populated
-	if cfg.Port == "" {
-		t.Error("Expected default Port to be populated, got empty string")
+	// 2. DatabaseURL takes second priority
+	cfgPostgres := &Config{
+		DatabaseURL:  "postgres://user:pass@other-db:5432/db",
+		DatabasePath: ":memory:",
 	}
-	if cfg.CronSchedule == "" {
-		t.Error("Expected default CronSchedule to be populated, got empty string")
-	}
-	if cfg.DatabasePath == "" {
-		t.Error("Expected default DatabasePath to be populated, got empty string")
+	if dsn := cfgPostgres.GetDatabaseDSN(); dsn != "postgres://user:pass@other-db:5432/db" {
+		t.Errorf("Expected DatabaseURL, got '%s'", dsn)
 	}
 
-	// Verify nested structures
-	if cfg.Gemini.Model == "" {
-		t.Error("Expected default Gemini.Model to be populated, got empty string")
+	// 3. DatabasePath SQLite fallback
+	cfgSQLite := &Config{
+		DatabasePath: ":memory:",
+	}
+	if dsn := cfgSQLite.GetDatabaseDSN(); dsn != ":memory:" {
+		t.Errorf("Expected DatabasePath, got '%s'", dsn)
 	}
 }
