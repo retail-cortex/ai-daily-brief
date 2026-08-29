@@ -12,12 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mailer",
     srcs = ["mailer.go"],
     importpath = "ai-daily-brief/internal/mailer",
     visibility = ["//:__subpackages__"],
+    deps = ["//internal/database"],
+)
+
+go_test(
+    name = "mailer_test",
+    srcs = ["mailer_test.go"],
+    embed = [":mailer"],
     deps = ["//internal/database"],
 )

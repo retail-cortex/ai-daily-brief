@@ -19,7 +19,10 @@ go_library(
     srcs = ["config.go"],
     importpath = "ai-daily-brief/internal/config",
     visibility = ["//:__subpackages__"],
-    deps = ["@com_github_rrmcguinness_modenv//pkg/modenv"],
+    deps = [
+        "//internal/security",
+        "@com_github_rrmcguinness_modenv//pkg/modenv",
+    ],
 )
 
 go_test(

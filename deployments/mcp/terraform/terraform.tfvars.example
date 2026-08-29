@@ -1,0 +1,16 @@
+# Optional: Google Cloud Project ID (if omitted, auto-detected from active gcloud config)
+# project_id           = "your-gcp-project-id"
+
+region                = "us-central1"
+service_name          = "ai-daily-brief-mcp"
+image_tag             = "latest"
+min_instances         = 0
+max_instances         = 10
+allow_unauthenticated = true
+
+# Optional: AlloyDB / PostgreSQL connection string (safely stored in Google Secret Manager)
+# alloydb_database_url = "postgres://postgres:SECURE_PASSWORD@10.0.0.1:5432/ai_daily_brief?sslmode=require"
+
+# Optional: Direct VPC Egress configuration for private AlloyDB connectivity
+# vpc_network    = "default"
+# vpc_subnetwork = "default"

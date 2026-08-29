@@ -1,0 +1,4 @@
+name: projects/${PROJECT_NUMBER}/policies/discoveryengine.managed.disableCustomMcpServerConnector
+spec:
+  rules:
+  - enforce: false

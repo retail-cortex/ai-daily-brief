@@ -1,10 +1,5 @@
-# MCP Server AlloyDB / Cloud Run Integration Configuration Example
-port = "8080"
-cron_schedule = "0 8 * * *"
-alloydb_url = "postgres://postgres:SECURE_PASSWORD@ALLOYDB_IP:5432/ai_daily_brief?sslmode=require"
+# MCP Server Cloud Run & AlloyDB Integration Configuration Example
 
-[gemini]
-model = "gemini-3.7-flash"
-auth_mode = "vertex_adc"
-vertex_project_id = "retail-cortex-prod"
-vertex_location = "us-central1"
+[database]
+dialect = "sqlite"
+address = "data/ai_daily_brief.db"

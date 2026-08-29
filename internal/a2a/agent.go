@@ -16,12 +16,15 @@ package a2a
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
 	"ai-daily-brief/internal/config"
+	"ai-daily-brief/internal/mcp"
 )
 
 // Agent coordinates Agent-to-Agent intelligence workflows consuming MCP
@@ -34,26 +37,78 @@ func NewAgent(cfg *config.AgentConfig) *Agent {
 	if cfg == nil {
 		cfg = config.LoadAgentConfig()
 	}
+	mcpCfg := cfg.GetMCPServer("daily_brief")
 	return &Agent{
 		Config:    cfg,
-		MCPClient: NewMCPClient(cfg.MCPServerURL, cfg.TimeoutSeconds),
+		MCPClient: NewMCPClient(mcpCfg.URL, mcpCfg.TimeoutSeconds),
 	}
 }
 
 // TaskResult encapsulates the execution outcome of an A2A agent invocation
 type TaskResult struct {
-	TaskName   string            `json:"task_name"`
-	Status     string            `json:"status"`
-	ToolCalls  []string          `json:"tool_calls"`
-	Output     string            `json:"output"`
-	ExecutedAt string            `json:"executed_at"`
-	DurationMs int64             `json:"duration_ms"`
-	Metadata   map[string]string `json:"metadata,omitempty"`
+	TaskName         string                 `json:"task_name"`
+	Status           string                 `json:"status"`
+	ToolCalls        []string               `json:"tool_calls"`
+	Output           string                 `json:"output"`
+	A2UIPayload      map[string]interface{} `json:"a2ui_payload,omitempty"`
+	A2UIInstructions []interface{}          `json:"a2ui_instructions,omitempty"`
+	ExecutedAt       string                 `json:"executed_at"`
+	DurationMs       int64                  `json:"duration_ms"`
+	Metadata         map[string]string      `json:"metadata,omitempty"`
+}
+
+func parseA2UIBlocks(blocks []MCPContentBlock) (string, map[string]interface{}, []interface{}) {
+	var outText strings.Builder
+	var payload map[string]interface{}
+	var instructions []interface{}
+
+	for _, b := range blocks {
+		if b.Type == "text" && b.Text != "" {
+			if outText.Len() > 0 {
+				outText.WriteString("\n\n")
+			}
+			outText.WriteString(b.Text)
+		} else if b.Type == "resource" && b.Resource != nil && b.Resource.Text != "" {
+			var rawMap map[string]interface{}
+			if err := json.Unmarshal([]byte(b.Resource.Text), &rawMap); err == nil && len(rawMap) > 0 {
+				payload = rawMap
+				if instList, ok := rawMap["instructions"].([]interface{}); ok && len(instList) > 0 {
+					instructions = instList
+				} else {
+					if cs, ok := rawMap["createSurface"]; ok {
+						instructions = append(instructions, map[string]interface{}{
+							"version":       mcp.A2UIVersion,
+							"createSurface": cs,
+						})
+					}
+					if uc, ok := rawMap["updateComponents"]; ok {
+						instructions = append(instructions, map[string]interface{}{
+							"version":          mcp.A2UIVersion,
+							"updateComponents": uc,
+						})
+					}
+				}
+			} else {
+				var rawList []interface{}
+				if err := json.Unmarshal([]byte(b.Resource.Text), &rawList); err == nil && len(rawList) > 0 {
+					instructions = rawList
+					payload = map[string]interface{}{
+						"version":      mcp.A2UIVersion,
+						"instructions": rawList,
+					}
+				}
+			}
+		}
+	}
+	return outText.String(), payload, instructions
 }
 
 // ExecuteTask runs an autonomous research task using the MCP control plane
 func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, error) {
 	startTime := time.Now()
+	geminiCfg := a.Config.GetGeminiConfig(a.Config.AgentName)
+	mcpCfg := a.Config.GetMCPServer("daily_brief")
+
 	res := &TaskResult{
 		TaskName:   task,
 		Status:     "SUCCESS",
@@ -61,50 +116,232 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 		ExecutedAt: time.Now().UTC().Format(time.RFC3339),
 		Metadata: map[string]string{
 			"agent":     a.Config.AgentName,
-			"mcp_url":   a.Config.MCPServerURL,
-			"gemini":    a.Config.Gemini.Model,
-			"auth_mode": a.Config.Gemini.AuthMode,
+			"mcp_url":   mcpCfg.URL,
+			"gemini":    geminiCfg.Model,
+			"auth_mode": geminiCfg.AuthMode,
+			"region":    geminiCfg.Region,
 		},
 	}
 
 	taskLower := strings.ToLower(task)
 	var finalOutput strings.Builder
-	finalOutput.WriteString(fmt.Sprintf("### 🤖 Agent Execution Report: %s\n\n", a.Config.AgentName))
 
-	// 1. Crawl request check
-	if strings.Contains(taskLower, "crawl") || strings.Contains(taskLower, "scrape") || strings.Contains(taskLower, "refresh") {
-		res.ToolCalls = append(res.ToolCalls, "trigger_crawl")
-		crawlOut, err := a.MCPClient.TriggerCrawl(ctx)
-		if err != nil {
-			log.Printf("[A2A Agent] TriggerCrawl error: %v", err)
-			finalOutput.WriteString(fmt.Sprintf("⚠️ Crawl trigger error: %v\n\n", err))
-		} else {
-			finalOutput.WriteString(fmt.Sprintf("%s\n\n", crawlOut))
+	// 0. Greeting & orientation check
+	isGreeting := taskLower == "hi" || taskLower == "hello" || taskLower == "hey" || taskLower == "help" || strings.HasPrefix(taskLower, "hi ") || strings.HasPrefix(taskLower, "hello ") || strings.Contains(taskLower, "who are you") || strings.Contains(taskLower, "what can you do")
+	if isGreeting {
+		res.ToolCalls = append(res.ToolCalls, "welcome_hub")
+		welcomeMsg := "Welcome to AI Daily Brief! I am your autonomous enterprise AI intelligence agent. Use the control cards below to explore today's stream, browse research papers, or trigger live ingestion."
+		w := mcp.BuildWelcomeA2UI()
+		b, _ := json.Marshal(w)
+		_ = json.Unmarshal(b, &res.A2UIPayload)
+		var insts []interface{}
+		bi, _ := json.Marshal(w.Instructions)
+		_ = json.Unmarshal(bi, &insts)
+		res.A2UIInstructions = insts
+
+		res.Output = welcomeMsg
+		res.DurationMs = time.Since(startTime).Milliseconds()
+		return res, nil
+	}
+
+	// 0. Extract potential article identifiers
+	var targetArticleID string
+	var targetURL string
+
+	// A. Check for explicit "article <ID>" or "context for article <ID>" or "article_id: <ID>"
+	if m := regexp.MustCompile(`(?i)(?:context\s+for(?:\s+article)?|for\s+article|article(?:\s+id)?)\s*[:=]?\s*([a-zA-Z0-9_\-]+-[a-f0-9]{8,64}|https?://\S+|[a-zA-Z0-9_\-\./]+)`).FindStringSubmatch(task); len(m) > 1 {
+		candidate := strings.TrimSpace(m[1])
+		if strings.HasPrefix(candidate, "http://") || strings.HasPrefix(candidate, "https://") {
+			targetURL = candidate
+		} else if candidate != "article" && candidate != "context" && candidate != "" {
+			targetArticleID = candidate
 		}
 	}
 
-	// 2. TL;DR or summary request check
-	if strings.Contains(taskLower, "tldr") || strings.Contains(taskLower, "briefing") || strings.Contains(taskLower, "executive") || strings.Contains(taskLower, "digest") {
+	// B. Generic <prefix>-<hex> ID match (matches any prefix: gcp-rel-, gcp-, arxiv-, hf-, openai-, etc.)
+	if targetArticleID == "" {
+		idRegex := regexp.MustCompile(`(?i)\b([a-zA-Z0-9_\-]+-[a-f0-9]{8,64})\b`)
+		if m := idRegex.FindStringSubmatch(task); len(m) > 1 {
+			targetArticleID = m[1]
+		}
+	}
+
+	// C. Explicit URL match
+	if targetURL == "" {
+		urlRegex := regexp.MustCompile(`https?://[^\s)\]]+`)
+		if u := urlRegex.FindString(task); u != "" {
+			targetURL = u
+		}
+	}
+
+	// 1. Article-specific operations (Load context, Summarize article, Deep ground)
+	isArticleOp := targetArticleID != "" || targetURL != "" || strings.Contains(taskLower, "load context") || strings.Contains(taskLower, "load article") || strings.Contains(taskLower, "deep ground") || (strings.Contains(taskLower, "summarize") && (strings.Contains(taskLower, "article") || strings.Contains(taskLower, "paper") || strings.Contains(taskLower, "architecture") || strings.Contains(taskLower, "benchmark")))
+
+	if isArticleOp {
+		res.ToolCalls = append(res.ToolCalls, "get_article_context")
+		args := map[string]interface{}{}
+		if targetArticleID != "" {
+			args["article_id"] = targetArticleID
+		}
+		if targetURL != "" {
+			args["url"] = targetURL
+		}
+		if strings.Contains(taskLower, "summar") || strings.Contains(taskLower, "bench") || strings.Contains(taskLower, "arch") {
+			args["mode"] = "summary"
+		}
+
+		blocks, err := a.MCPClient.CallToolBlocks(ctx, "get_article_context", args)
+		if err != nil {
+			log.Printf("[A2A Agent] GetArticleContext error: %v", err)
+			finalOutput.WriteString(fmt.Sprintf("Load article context error: %v", err))
+		} else {
+			text, payload, insts := parseA2UIBlocks(blocks)
+			if text != "" {
+				finalOutput.WriteString(text)
+			}
+			if len(payload) > 0 {
+				res.A2UIPayload = payload
+			}
+			if len(insts) > 0 {
+				res.A2UIInstructions = insts
+			}
+		}
+	}
+
+	// 2. Global TL;DR / Executive Briefing / Multi-day Overview (ONLY when NOT targeting a single article)
+	if len(res.ToolCalls) == 0 && (strings.Contains(taskLower, "tldr") || strings.Contains(taskLower, "briefing") || strings.Contains(taskLower, "overview") || strings.Contains(taskLower, "executive") || strings.Contains(taskLower, "digest") || strings.Contains(taskLower, "summary") || strings.Contains(taskLower, "summarize") || strings.Contains(taskLower, "week") || strings.Contains(taskLower, "month")) {
 		res.ToolCalls = append(res.ToolCalls, "generate_tldr")
-		tldrOut, err := a.MCPClient.GenerateTLDR(ctx)
+		tldrArgs := map[string]interface{}{}
+
+		if strings.Contains(taskLower, "week") || strings.Contains(taskLower, "7 days") || strings.Contains(taskLower, "past 7") || strings.Contains(taskLower, "last 7") {
+			tldrArgs["days"] = float64(7)
+			tldrArgs["time_span"] = "the Past Week"
+		} else if strings.Contains(taskLower, "month") || strings.Contains(taskLower, "30 days") || strings.Contains(taskLower, "past 30") || strings.Contains(taskLower, "last 30") {
+			tldrArgs["days"] = float64(30)
+			tldrArgs["time_span"] = "the Past 30 Days"
+		}
+
+		if strings.Contains(taskLower, "frontier") {
+			tldrArgs["category"] = "Frontier Models"
+		} else if strings.Contains(taskLower, "paper") || strings.Contains(taskLower, "arxiv") || strings.Contains(taskLower, "research") {
+			tldrArgs["category"] = "AI Research Papers"
+		} else if strings.Contains(taskLower, "cloud") || strings.Contains(taskLower, "gcp") || strings.Contains(taskLower, "infrastructure") {
+			tldrArgs["category"] = "Google Cloud"
+		} else if strings.Contains(taskLower, "tool") || strings.Contains(taskLower, "oss") {
+			tldrArgs["category"] = "OSS & Tooling"
+		}
+
+		blocks, err := a.MCPClient.CallToolBlocks(ctx, "generate_tldr", tldrArgs)
 		if err != nil {
 			log.Printf("[A2A Agent] GenerateTLDR error: %v", err)
-			finalOutput.WriteString(fmt.Sprintf("⚠️ TL;DR error: %v\n\n", err))
+			finalOutput.WriteString(fmt.Sprintf("TL;DR error: %v", err))
 		} else {
-			finalOutput.WriteString(fmt.Sprintf("%s\n\n", tldrOut))
+			text, payload, insts := parseA2UIBlocks(blocks)
+			if text != "" {
+				finalOutput.WriteString(text)
+			}
+			if len(payload) > 0 {
+				res.A2UIPayload = payload
+			}
+			if len(insts) > 0 {
+				res.A2UIInstructions = insts
+			}
 		}
 	}
 
-	// 3. Article search / list query
-	if len(res.ToolCalls) == 0 || strings.Contains(taskLower, "search") || strings.Contains(taskLower, "find") || strings.Contains(taskLower, "list") || strings.Contains(taskLower, "paper") || strings.Contains(taskLower, "model") {
+	// 3. Crawl request check
+	if len(res.ToolCalls) == 0 && (strings.Contains(taskLower, "crawl") || strings.Contains(taskLower, "scrape") || strings.Contains(taskLower, "refresh")) {
+		res.ToolCalls = append(res.ToolCalls, "trigger_crawl")
+		blocks, err := a.MCPClient.CallToolBlocks(ctx, "trigger_crawl", nil)
+		if err != nil {
+			log.Printf("[A2A Agent] TriggerCrawl error: %v", err)
+			finalOutput.WriteString(fmt.Sprintf("Crawl error: %v", err))
+		} else {
+			text, payload, insts := parseA2UIBlocks(blocks)
+			if text != "" {
+				finalOutput.WriteString(text)
+			}
+			if len(payload) > 0 {
+				res.A2UIPayload = payload
+			}
+			if len(insts) > 0 {
+				res.A2UIInstructions = insts
+			}
+		}
+	}
+
+	// 4. Telemetry check
+	if len(res.ToolCalls) == 0 && (strings.Contains(taskLower, "telemetry") || strings.Contains(taskLower, "status") || strings.Contains(taskLower, "health") || strings.Contains(taskLower, "metric")) {
+		res.ToolCalls = append(res.ToolCalls, "get_telemetry")
+		blocks, err := a.MCPClient.CallToolBlocks(ctx, "get_telemetry", nil)
+		if err != nil {
+			log.Printf("[A2A Agent] GetTelemetry error: %v", err)
+			finalOutput.WriteString(fmt.Sprintf("Telemetry error: %v", err))
+		} else {
+			text, payload, insts := parseA2UIBlocks(blocks)
+			if text != "" {
+				finalOutput.WriteString(text)
+			}
+			if len(payload) > 0 {
+				res.A2UIPayload = payload
+			}
+			if len(insts) > 0 {
+				res.A2UIInstructions = insts
+			}
+		}
+	}
+
+	// 5. Newsletter request
+	if len(res.ToolCalls) == 0 && strings.Contains(taskLower, "newsletter") {
+		res.ToolCalls = append(res.ToolCalls, "get_newsletter")
+		blocks, err := a.MCPClient.CallToolBlocks(ctx, "get_newsletter", nil)
+		if err != nil {
+			log.Printf("[A2A Agent] GetNewsletter error: %v", err)
+			finalOutput.WriteString(fmt.Sprintf("Newsletter error: %v", err))
+		} else {
+			text, payload, insts := parseA2UIBlocks(blocks)
+			if text != "" {
+				finalOutput.WriteString(text)
+			}
+			if len(payload) > 0 {
+				res.A2UIPayload = payload
+			}
+			if len(insts) > 0 {
+				res.A2UIInstructions = insts
+			}
+		}
+	}
+
+	// 6. Conversational follow-up & explanation
+	if len(res.ToolCalls) == 0 && (strings.Contains(taskLower, "understand") || strings.Contains(taskLower, "explain") || strings.Contains(taskLower, "help me") || strings.Contains(taskLower, "what does") || strings.Contains(taskLower, "why") || strings.Contains(taskLower, "tell me more")) {
+		res.ToolCalls = append(res.ToolCalls, "explain_concept")
+		finalOutput.WriteString(fmt.Sprintf("Regarding your inquiry: \"%s\"\n\nThe AI Daily Brief platform continuously aggregates intelligence across 5 major streams: Frontier Models, Google Cloud, AI Research Papers, OSS Tooling, and Business. Use the cards below to explore details.", task))
+
+		w := mcp.BuildWelcomeA2UI()
+		b, _ := json.Marshal(w)
+		_ = json.Unmarshal(b, &res.A2UIPayload)
+		var insts []interface{}
+		bi, _ := json.Marshal(w.Instructions)
+		_ = json.Unmarshal(bi, &insts)
+		res.A2UIInstructions = insts
+
+		res.Output = strings.TrimSpace(finalOutput.String())
+		res.DurationMs = time.Since(startTime).Milliseconds()
+		return res, nil
+	}
+
+	// 7. Article search / list query fallback
+	if len(res.ToolCalls) == 0 {
 		category := ""
-		if strings.Contains(taskLower, "frontier") || strings.Contains(taskLower, "llm") {
+		if strings.Contains(taskLower, "frontier") || strings.Contains(taskLower, "llm") || strings.Contains(taskLower, "foundation") {
 			category = "Frontier Models"
-		} else if strings.Contains(taskLower, "paper") || strings.Contains(taskLower, "arxiv") {
+		} else if strings.Contains(taskLower, "paper") || strings.Contains(taskLower, "arxiv") || strings.Contains(taskLower, "research") || strings.Contains(taskLower, "preprint") {
 			category = "AI Research Papers"
-		} else if strings.Contains(taskLower, "cloud") || strings.Contains(taskLower, "gcp") {
+		} else if strings.Contains(taskLower, "cloud") || strings.Contains(taskLower, "gcp") || strings.Contains(taskLower, "google cloud") || strings.Contains(taskLower, "infrastructure") {
 			category = "Google Cloud"
-		} else if strings.Contains(taskLower, "business") || strings.Contains(taskLower, "funding") {
+		} else if strings.Contains(taskLower, "tool") || strings.Contains(taskLower, "oss") || strings.Contains(taskLower, "open-source") || strings.Contains(taskLower, "open source") || strings.Contains(taskLower, "librar") || strings.Contains(taskLower, "framework") {
+			category = "OSS & Tooling"
+		} else if strings.Contains(taskLower, "business") || strings.Contains(taskLower, "funding") || strings.Contains(taskLower, "venture") || strings.Contains(taskLower, "investment") {
 			category = "AI Business & Infra"
 		}
 
@@ -115,19 +352,68 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 			company = "Anthropic"
 		} else if strings.Contains(taskLower, "openai") {
 			company = "OpenAI"
+		} else if strings.Contains(taskLower, "meta") {
+			company = "Meta"
+		} else if strings.Contains(taskLower, "deepseek") {
+			company = "DeepSeek"
+		} else if strings.Contains(taskLower, "mistral") {
+			company = "Mistral"
 		}
 
 		res.ToolCalls = append(res.ToolCalls, "list_articles")
-		articlesOut, err := a.MCPClient.ListArticles(ctx, category, company, "", 5)
+		args := map[string]interface{}{}
+		if category != "" {
+			args["category"] = category
+		}
+		if company != "" {
+			args["company"] = company
+		}
+		if category == "" && company == "" && !strings.HasPrefix(taskLower, "list ") && !strings.HasPrefix(taskLower, "show ") {
+			args["query"] = task
+		}
+		args["limit"] = 5
+
+		blocks, err := a.MCPClient.CallToolBlocks(ctx, "list_articles", args)
 		if err != nil {
 			log.Printf("[A2A Agent] ListArticles error: %v", err)
-			finalOutput.WriteString(fmt.Sprintf("⚠️ List articles error: %v\n\n", err))
+			finalOutput.WriteString(fmt.Sprintf("List articles error: %v", err))
 		} else {
-			finalOutput.WriteString(fmt.Sprintf("%s\n\n", articlesOut))
+			text, payload, insts := parseA2UIBlocks(blocks)
+			if text != "" {
+				finalOutput.WriteString(text)
+			}
+			if len(payload) > 0 {
+				res.A2UIPayload = payload
+			}
+			if len(insts) > 0 {
+				res.A2UIInstructions = insts
+			}
 		}
 	}
 
-	res.Output = finalOutput.String()
+	res.Output = strings.TrimSpace(finalOutput.String())
 	res.DurationMs = time.Since(startTime).Milliseconds()
 	return res, nil
+}
+
+// Chat executes interactive conversational research against the MCP control plane
+func (a *Agent) Chat(ctx context.Context, sessionID, message, articleID string) (string, error) {
+	var groundPrefix string
+	if articleID != "" {
+		articleCtx, err := a.MCPClient.GetArticleContext(ctx, articleID, "")
+		if err == nil && articleCtx != "" {
+			groundPrefix = fmt.Sprintf("Grounded in Article [%s]:\n%s\n\n", articleID, articleCtx)
+		}
+	}
+
+	taskPrompt := message
+	if groundPrefix != "" {
+		taskPrompt = groundPrefix + message
+	}
+
+	result, err := a.ExecuteTask(ctx, taskPrompt)
+	if err != nil {
+		return "", err
+	}
+	return result.Output, nil
 }

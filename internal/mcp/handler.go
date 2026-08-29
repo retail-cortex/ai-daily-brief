@@ -49,10 +49,19 @@ type RPCError struct {
 	Data    any    `json:"data,omitempty"`
 }
 
+// MCP Resource Content
+type MCPResourceContent struct {
+	URI      string `json:"uri"`
+	MIMEType string `json:"mimeType"`
+	Text     string `json:"text,omitempty"`
+	Blob     string `json:"blob,omitempty"`
+}
+
 // MCP Content Block
 type MCPContentBlock struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+	Type     string              `json:"type"`
+	Text     string              `json:"text,omitempty"`
+	Resource *MCPResourceContent `json:"resource,omitempty"`
 }
 
 // Tool Definition Structure
@@ -91,6 +100,10 @@ func (h *Handler) GetToolDefinitions() []MCPTool {
 						"type":        "string",
 						"description": "Search keyword query across article title and summary",
 					},
+					"days": map[string]interface{}{
+						"type":        "integer",
+						"description": "Filter articles created in the past N days (e.g. 7 for past week, 30 for past month)",
+					},
 					"limit": map[string]interface{}{
 						"type":        "integer",
 						"description": "Maximum number of articles to return (default: 10, max: 50)",
@@ -117,10 +130,23 @@ func (h *Handler) GetToolDefinitions() []MCPTool {
 		},
 		{
 			Name:        "generate_tldr",
-			Description: "Synthesize today's executive strategic intelligence brief across all 5 streams using Vertex AI ADC or Gemini 3.7.",
+			Description: "Synthesize an executive strategic intelligence brief or multi-day overview across all 5 streams using Vertex AI ADC or Gemini 3.7.",
 			InputSchema: map[string]interface{}{
-				"type":       "object",
-				"properties": map[string]interface{}{},
+				"type": "object",
+				"properties": map[string]interface{}{
+					"days": map[string]interface{}{
+						"type":        "integer",
+						"description": "Number of past days to synthesize into the overview (1 for daily brief, 7 for weekly overview, 30 for monthly)",
+					},
+					"time_span": map[string]interface{}{
+						"type":        "string",
+						"description": "Human-readable timeframe label (e.g. 'the Past Week', 'the Past 7 Days', 'the Past 30 Days')",
+					},
+					"category": map[string]interface{}{
+						"type":        "string",
+						"description": "Optional category filter (e.g. 'Frontier Models', 'AI Research Papers', 'Google Cloud')",
+					},
+				},
 			},
 		},
 		{
@@ -169,6 +195,14 @@ func (h *Handler) GetToolDefinitions() []MCPTool {
 				"properties": map[string]interface{}{},
 			},
 		},
+		{
+			Name:        "get_telemetry",
+			Description: "Inspect control plane health, database article counts, active Gemini/Vertex model, and authentication mode (alias for get_system_status).",
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
 	}
 }
 
@@ -210,18 +244,90 @@ func (h *Handler) HandleRequest(req JSONRPCRequest) JSONRPCResponse {
 				{
 					"uri":         "brief://today/newsletter",
 					"name":        "Today's Intelligence Digest",
-					"mimeType":    "text/markdown",
+					"mimeType":    MIMETypeMarkdown,
 					"description": "Complete curated AI & Cloud daily intelligence briefing",
 				},
 				{
 					"uri":         "brief://today/tldr",
 					"name":        "Executive Strategic Briefing",
-					"mimeType":    "text/markdown",
+					"mimeType":    MIMETypeMarkdown,
 					"description": "Strategic synthesis across Frontier Models, Compute, and Open-Source",
+				},
+				{
+					"uri":         "brief://today/a2ui",
+					"name":        "Today's A2UI Component Cards",
+					"mimeType":    MIMETypeA2UIJSON,
+					"description": "Structured visual cards formatted for Gemini Enterprise and Agent UI",
 				},
 			},
 		}
 		return resp
+
+	case "resources/read":
+		var resParams struct {
+			URI string `json:"uri"`
+		}
+		if err := json.Unmarshal(req.Params, &resParams); err != nil {
+			resp.Error = &RPCError{Code: -32602, Message: "Invalid resource read params"}
+			return resp
+		}
+
+		switch resParams.URI {
+		case "brief://today/newsletter":
+			var items []database.NewsItem
+			h.DB.Order("pub_date DESC").Limit(30).Find(&items)
+			var sb strings.Builder
+			sb.WriteString(fmt.Sprintf("# 📰 Daily AI & Cloud Intelligence Digest (%d items)\n\n", len(items)))
+			for i, it := range items {
+				sb.WriteString(fmt.Sprintf("### %d. %s\nSource: **%s** • Category: *%s*\n%s\nLink: %s\n\n", i+1, it.Title, it.Company, it.Category, it.Summary, it.Link))
+			}
+			resp.Result = map[string]interface{}{
+				"contents": []map[string]interface{}{
+					{
+						"uri":      resParams.URI,
+						"mimeType": MIMETypeMarkdown,
+						"text":     strings.TrimSpace(sb.String()),
+					},
+				},
+			}
+			return resp
+
+		case "brief://today/a2ui":
+			var items []database.NewsItem
+			h.DB.Order("pub_date DESC").Limit(30).Find(&items)
+			cards := BuildArticleCardsA2UI(items)
+			resp.Result = map[string]interface{}{
+				"contents": []map[string]interface{}{
+					{
+						"uri":      resParams.URI,
+						"mimeType": MIMETypeA2UIJSON,
+						"text":     MarshalA2UIJSON(cards),
+					},
+				},
+			}
+			return resp
+
+		case "brief://today/tldr":
+			var setting database.Setting
+			tldrText := "No briefing generated yet today. Call tool 'generate_tldr' to synthesize."
+			if err := h.DB.First(&setting, "\"key\" = ?", "latest_tldr").Error; err == nil && setting.Value != "" {
+				tldrText = setting.Value
+			}
+			resp.Result = map[string]interface{}{
+				"contents": []map[string]interface{}{
+					{
+						"uri":      resParams.URI,
+						"mimeType": MIMETypeMarkdown,
+						"text":     tldrText,
+					},
+				},
+			}
+			return resp
+
+		default:
+			resp.Error = &RPCError{Code: -32602, Message: fmt.Sprintf("Resource not found: %s", resParams.URI)}
+			return resp
+		}
 
 	case "tools/call":
 		var callParams struct {
@@ -233,7 +339,7 @@ func (h *Handler) HandleRequest(req JSONRPCRequest) JSONRPCResponse {
 			return resp
 		}
 
-		content, err := h.ExecuteTool(callParams.Name, callParams.Arguments)
+		blocks, err := h.ExecuteToolBlocks(callParams.Name, callParams.Arguments)
 		if err != nil {
 			resp.Result = map[string]interface{}{
 				"content": []MCPContentBlock{
@@ -245,9 +351,7 @@ func (h *Handler) HandleRequest(req JSONRPCRequest) JSONRPCResponse {
 		}
 
 		resp.Result = map[string]interface{}{
-			"content": []MCPContentBlock{
-				{Type: "text", Text: content},
-			},
+			"content": blocks,
 		}
 		return resp
 
@@ -257,8 +361,23 @@ func (h *Handler) HandleRequest(req JSONRPCRequest) JSONRPCResponse {
 	}
 }
 
-// ExecuteTool dispatches specific tool operations
+// ExecuteTool dispatches specific tool operations and returns the primary text representation
 func (h *Handler) ExecuteTool(name string, args map[string]interface{}) (string, error) {
+	blocks, err := h.ExecuteToolBlocks(name, args)
+	if err != nil {
+		return "", err
+	}
+	var texts []string
+	for _, b := range blocks {
+		if b.Type == "text" && b.Text != "" {
+			texts = append(texts, b.Text)
+		}
+	}
+	return strings.Join(texts, "\n\n"), nil
+}
+
+// ExecuteToolBlocks executes a tool and produces structured content blocks with precise MIME types
+func (h *Handler) ExecuteToolBlocks(name string, args map[string]interface{}) ([]MCPContentBlock, error) {
 	switch name {
 	case "list_articles":
 		limit := 10
@@ -269,7 +388,11 @@ func (h *Handler) ExecuteTool(name string, args map[string]interface{}) (string,
 			}
 		}
 
-		query := h.DB.Order("pub_date DESC").Limit(limit)
+		query := h.DB.Order("pub_date DESC, created_at DESC").Limit(limit)
+		if d, ok := args["days"].(float64); ok && d > 0 {
+			cutoff := time.Now().AddDate(0, 0, -int(d))
+			query = query.Where("created_at >= ?", cutoff)
+		}
 		if cat, ok := args["category"].(string); ok && strings.TrimSpace(cat) != "" {
 			query = query.Where("category LIKE ?", "%"+strings.TrimSpace(cat)+"%")
 		}
@@ -283,10 +406,29 @@ func (h *Handler) ExecuteTool(name string, args map[string]interface{}) (string,
 
 		var items []database.NewsItem
 		if err := query.Find(&items).Error; err != nil {
-			return "", fmt.Errorf("database query failed: %w", err)
+			return nil, fmt.Errorf("database query failed: %w", err)
 		}
 
-		return FormatArticleCards(items), nil
+		introText := fmt.Sprintf("I retrieved %d articles from your intelligence stream. Please inspect the cards below:", len(items))
+		if len(items) == 0 {
+			introText = "No intelligence items found matching your query."
+		}
+		structuredCards := BuildArticleCardsA2UI(items)
+
+		return []MCPContentBlock{
+			{
+				Type: "text",
+				Text: introText,
+			},
+			{
+				Type: "resource",
+				Resource: &MCPResourceContent{
+					URI:      "brief://a2ui/articles/list",
+					MIMEType: MIMETypeA2UIJSON,
+					Text:     MarshalA2UIJSON(structuredCards),
+				},
+			},
+		}, nil
 
 	case "get_article_context":
 		articleID, _ := args["article_id"].(string)
@@ -295,96 +437,249 @@ func (h *Handler) ExecuteTool(name string, args map[string]interface{}) (string,
 		var item database.NewsItem
 		if articleID != "" {
 			if err := h.DB.First(&item, "id = ?", articleID).Error; err != nil {
-				return "", fmt.Errorf("article with ID '%s' not found: %w", articleID, err)
+				// Try case-insensitive or partial prefix matching
+				_ = h.DB.Where("id LIKE ?", "%"+articleID+"%").First(&item).Error
 			}
+			if item.Link != "" {
+				url = item.Link
+			}
+		}
+
+		if url == "" && item.Link != "" {
 			url = item.Link
 		}
 
-		if url == "" {
-			return "", fmt.Errorf("either 'article_id' or 'url' must be specified")
+		if url == "" && articleID == "" {
+			return nil, fmt.Errorf("either 'article_id' or 'url' must be specified")
 		}
 
-		bodyText, err := agent.FetchFullArticleText(url)
-		if err != nil {
-			if item.Summary != "" {
-				bodyText = fmt.Sprintf("Notice: Full webpage fetch timed out. Using indexed summary:\n%s", item.Summary)
-			} else {
-				return "", fmt.Errorf("failed to fetch article webpage: %w", err)
+		var bodyText string
+		if url != "" {
+			var err error
+			bodyText, err = agent.FetchFullArticleText(url)
+			if err != nil {
+				if item.Summary != "" {
+					bodyText = fmt.Sprintf("Extracted Overview & Key Takeaways:\n\n%s\n\nFull Reference Source: %s (%s)", item.Summary, url, item.Company)
+				} else {
+					bodyText = fmt.Sprintf("External source reference: %s (%s)\n\nFull webpage extraction unavailable; indexed metadata preserved.", url, item.Company)
+				}
 			}
+		} else if item.Summary != "" {
+			bodyText = item.Summary
 		}
 
 		if item.Title == "" {
-			item.Title = url
-			item.Link = url
-			item.Company = "Web"
+			if url != "" {
+				item.Title = url
+				item.Link = url
+			} else {
+				item.Title = articleID
+			}
+			item.Company = "AI Source"
 			item.Category = "General"
 		}
 
-		return FormatGroundedContextCard(item, bodyText), nil
+		mode, _ := args["mode"].(string)
+
+		var introText string
+		var payload A2UIPayload
+		if mode == "summary" || mode == "summarize" || mode == "architecture" {
+			summaryText, err := agent.GenerateArticleSummary(h.DB, item, bodyText)
+			if err != nil || summaryText == "" {
+				summaryText = item.Summary
+			}
+			introText = fmt.Sprintf("Here is the technical synthesis for '%s' (%s):\n\n%s", item.Title, item.ID, summaryText)
+			payload = BuildArticleSummaryA2UI(item, summaryText)
+		} else {
+			introText = fmt.Sprintf("I loaded the grounded context for '%s' (%s). Use the card below to inspect extracted text or summarize:", item.Title, item.ID)
+			payload = BuildGroundedContextA2UI(item, bodyText)
+		}
+
+		return []MCPContentBlock{
+			{
+				Type: "text",
+				Text: introText,
+			},
+			{
+				Type: "resource",
+				Resource: &MCPResourceContent{
+					URI:      fmt.Sprintf("brief://a2ui/articles/%s/context", item.ID),
+					MIMEType: MIMETypeA2UIJSON,
+					Text:     MarshalA2UIJSON(payload),
+				},
+			},
+		}, nil
 
 	case "generate_tldr":
-		var items []database.NewsItem
-		h.DB.Order("pub_date DESC").Limit(25).Find(&items)
-		tldr, err := agent.GenerateDailyTLDR(h.DB, items)
-		if err != nil {
-			return "", fmt.Errorf("TL;DR generation failed: %w", err)
+		days := 1
+		if d, ok := args["days"].(float64); ok && d > 0 {
+			days = int(d)
 		}
+		timeSpanStr, _ := args["time_span"].(string)
+		if timeSpanStr == "" {
+			if days == 7 {
+				timeSpanStr = "the Past Week"
+			} else if days > 1 {
+				timeSpanStr = fmt.Sprintf("the Past %d Days", days)
+			} else {
+				timeSpanStr = "Today"
+			}
+		}
+
+		query := h.DB.Order("pub_date DESC, created_at DESC")
+		if days > 1 {
+			cutoff := time.Now().AddDate(0, 0, -days)
+			query = query.Where("created_at >= ?", cutoff)
+		}
+		if cat, ok := args["category"].(string); ok && strings.TrimSpace(cat) != "" {
+			query = query.Where("category LIKE ?", "%"+strings.TrimSpace(cat)+"%")
+		}
+
+		var items []database.NewsItem
+		query.Limit(35).Find(&items)
+		if len(items) < 3 {
+			// Fallback to latest items if time filter yields few results
+			h.DB.Order("pub_date DESC, created_at DESC").Limit(25).Find(&items)
+		}
+
+		var tldr string
+		var err error
+		if days > 1 {
+			tldr, err = agent.GenerateTimespanOverview(h.DB, items, timeSpanStr)
+		} else {
+			tldr, err = agent.GenerateDailyTLDR(h.DB, items)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("overview generation failed: %w", err)
+		}
+
 		dateStr := time.Now().Format("Monday, Jan 02, 2006")
-		return FormatExecutiveTLDRCard(tldr, dateStr), nil
+		introText := fmt.Sprintf("Here is the Executive Strategic Overview for %s (%s):\n\n%s", timeSpanStr, dateStr, tldr)
+		tldrInstructions := BuildExecutiveTLDRA2UI(tldr, fmt.Sprintf("%s • %s", timeSpanStr, dateStr))
+
+		return []MCPContentBlock{
+			{
+				Type: "text",
+				Text: introText,
+			},
+			{
+				Type: "resource",
+				Resource: &MCPResourceContent{
+					URI:      fmt.Sprintf("brief://a2ui/tldr/%s", dateStr),
+					MIMEType: MIMETypeA2UIJSON,
+					Text:     MarshalA2UIJSON(tldrInstructions),
+				},
+			},
+		}, nil
 
 	case "trigger_crawl":
 		res, err := crawler.ExecuteBatchRun(h.DB)
 		if err != nil {
-			return "", fmt.Errorf("crawler execution failed: %w", err)
+			return nil, fmt.Errorf("crawler execution failed: %w", err)
 		}
-		var sb strings.Builder
-		sb.WriteString("┌─────────────────────────────────────────────────────────────\n")
-		sb.WriteString("│ ⚡ **INTELLIGENCE CRAWLER BATCH SUMMARY**\n")
-		sb.WriteString("├─────────────────────────────────────────────────────────────\n")
-		sb.WriteString(fmt.Sprintf("│ • **Status:**             %s\n", res.Status))
-		sb.WriteString(fmt.Sprintf("│ • **New Articles Added:** %d\n", res.NewItemsInserted))
-		sb.WriteString(fmt.Sprintf("│ • **Duplicates Filtered:** %d\n", res.SkippedDuplicates))
-		sb.WriteString(fmt.Sprintf("│ • **Total DB Articles:**  %d\n", res.TotalInDB))
-		sb.WriteString("├─────────────────────────────────────────────────────────────\n")
-		sb.WriteString("│ 📄 **Execution Log Preview:**\n│\n")
-		for _, l := range strings.Split(res.Log, "\n") {
-			if strings.TrimSpace(l) != "" {
-				sb.WriteString(fmt.Sprintf("│ %s\n", l))
-			}
-		}
-		sb.WriteString("└─────────────────────────────────────────────────────────────\n")
-		return sb.String(), nil
+		introText := fmt.Sprintf("Intelligence crawl completed with status '%s' (%d new articles inserted).", res.Status, res.NewItemsInserted)
+		crawlCard := BuildCrawlBatchA2UI(res)
+
+		return []MCPContentBlock{
+			{
+				Type: "text",
+				Text: introText,
+			},
+			{
+				Type: "resource",
+				Resource: &MCPResourceContent{
+					URI:      fmt.Sprintf("brief://a2ui/crawls/%s", res.RunID),
+					MIMEType: MIMETypeA2UIJSON,
+					Text:     MarshalA2UIJSON(crawlCard),
+				},
+			},
+		}, nil
 
 	case "get_newsletter":
 		var items []database.NewsItem
 		h.DB.Order("pub_date DESC").Limit(30).Find(&items)
 		dateStr := time.Now().Format("Monday, Jan 02, 2006")
 		html := mailer.GenerateNewsletterHTML(items, dateStr)
-		_ = html
-		cards := FormatArticleCards(items)
-		return fmt.Sprintf("# 📧 Daily AI & Cloud Intelligence Digest (%s)\n\n%s", dateStr, cards), nil
+		introText := fmt.Sprintf("Daily AI & Cloud Intelligence Digest for %s (%d articles prepared).", dateStr, len(items))
+		structuredCards := BuildArticleCardsA2UI(items)
+
+		return []MCPContentBlock{
+			{
+				Type: "text",
+				Text: introText,
+			},
+			{
+				Type: "resource",
+				Resource: &MCPResourceContent{
+					URI:      "brief://newsletter/html",
+					MIMEType: MIMETypeHTML,
+					Text:     html,
+				},
+			},
+			{
+				Type: "resource",
+				Resource: &MCPResourceContent{
+					URI:      "brief://a2ui/newsletter/cards",
+					MIMEType: MIMETypeA2UIJSON,
+					Text:     MarshalA2UIJSON(structuredCards),
+				},
+			},
+		}, nil
 
 	case "agent_chat":
 		msg, _ := args["message"].(string)
 		if strings.TrimSpace(msg) == "" {
-			return "", fmt.Errorf("message argument is required")
+			return nil, fmt.Errorf("message argument is required")
 		}
 		sessionID, _ := args["session_id"].(string)
+		if sessionID == "" {
+			sessionID = fmt.Sprintf("sess_%d", time.Now().UnixNano())
+		}
 		articleID, _ := args["article_id"].(string)
 
 		chatResp, err := agent.GenerateChatResponse(h.DB, sessionID, msg, articleID)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return chatResp.Response, nil
 
-	case "get_system_status":
+		return []MCPContentBlock{
+			{
+				Type: "text",
+				Text: chatResp.Response,
+			},
+			{
+				Type: "resource",
+				Resource: &MCPResourceContent{
+					URI:      fmt.Sprintf("brief://a2ui/chat/%s", sessionID),
+					MIMEType: MIMETypeA2UIJSON,
+					Text:     MarshalA2UIJSON(chatResp),
+				},
+			},
+		}, nil
+
+	case "get_system_status", "get_telemetry":
 		var totalItems int64
 		h.DB.Model(&database.NewsItem{}).Count(&totalItems)
 		model, authMode, _, projectID, location := agent.GetAgentSettings(h.DB)
-		return FormatTelemetryCard(totalItems, model, authMode, projectID, location), nil
+		telemetryText := fmt.Sprintf("AI Daily Brief Control Plane: %d articles indexed | Active Model: %s | Auth: %s", totalItems, model, authMode)
+		telemetryCard := BuildTelemetryA2UI(totalItems, model, authMode, projectID, location)
+
+		return []MCPContentBlock{
+			{
+				Type: "text",
+				Text: telemetryText,
+			},
+			{
+				Type: "resource",
+				Resource: &MCPResourceContent{
+					URI:      "brief://a2ui/telemetry",
+					MIMEType: MIMETypeA2UIJSON,
+					Text:     MarshalA2UIJSON(telemetryCard),
+				},
+			},
+		}, nil
 
 	default:
-		return "", fmt.Errorf("unknown tool name '%s'", name)
+		return nil, fmt.Errorf("unknown tool name '%s'", name)
 	}
 }

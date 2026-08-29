@@ -34,6 +34,15 @@ import (
 	"gorm.io/gorm"
 )
 
+var geminiHTTPClient = &http.Client{
+	Timeout: 30 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 20,
+		IdleConnTimeout:     90 * time.Second,
+	},
+}
+
 type ChatResponse struct {
 	Response     string `json:"response"`
 	Grounded     bool   `json:"grounded"`
@@ -87,13 +96,16 @@ func getSetting(db *gorm.DB, key, defaultValue string) string {
 }
 
 // GetAgentSettings retrieves LLM configuration prioritizing runtime database settings over static config
-func GetAgentSettings(db *gorm.DB) (model, authMode, apiKey, projectID, location string) {
+func GetAgentSettings(db *gorm.DB) (model, authMode, apiKey, projectID, modelRegion string) {
 	// 1. Read DB settings first (User GUI configured settings)
 	model = getSetting(db, "gemini_model", "")
 	authMode = getSetting(db, "gemini_auth_mode", "")
 	apiKey = getSetting(db, "gemini_api_key", "")
 	projectID = getSetting(db, "vertex_project_id", "")
-	location = getSetting(db, "vertex_location", "")
+	modelRegion = getSetting(db, "vertex_location", "")
+	if modelRegion == "" {
+		modelRegion = getSetting(db, "model_region", "")
+	}
 
 	// 2. Check environment variables
 	if envKey := os.Getenv("GEMINI_API_KEY"); envKey != "" && apiKey == "" {
@@ -104,23 +116,30 @@ func GetAgentSettings(db *gorm.DB) (model, authMode, apiKey, projectID, location
 	} else if envGCP := os.Getenv("GCP_PROJECT"); envGCP != "" && projectID == "" {
 		projectID = envGCP
 	}
+	if envRegion := os.Getenv("GEMINI_MODEL_REGION"); envRegion != "" && modelRegion == "" {
+		modelRegion = envRegion
+	}
 
 	// 3. Fallback to static .env.toml config file if not set in DB
 	if config.AppConfig != nil {
+		defaultGemini := config.AppConfig.GetGeminiConfig("default")
 		if model == "" {
-			model = config.AppConfig.Gemini.Model
+			model = defaultGemini.Model
 		}
 		if authMode == "" {
-			authMode = config.AppConfig.Gemini.AuthMode
+			authMode = defaultGemini.AuthMode
 		}
 		if apiKey == "" {
-			apiKey = config.AppConfig.Gemini.APIKey
+			apiKey = defaultGemini.APIKey
 		}
 		if projectID == "" {
-			projectID = config.AppConfig.Gemini.VertexProjectID
+			projectID = config.AppConfig.GoogleCloud.ProjectID
 		}
-		if location == "" {
-			location = config.AppConfig.Gemini.VertexLocation
+		if modelRegion == "" {
+			modelRegion = defaultGemini.Region
+		}
+		if modelRegion == "" {
+			modelRegion = config.AppConfig.GoogleCloud.ProjectRegion
 		}
 	}
 
@@ -129,10 +148,10 @@ func GetAgentSettings(db *gorm.DB) (model, authMode, apiKey, projectID, location
 		model = "gemini-3.7-flash"
 	}
 	if authMode == "" {
-		authMode = "api_key"
+		authMode = "vertex_adc"
 	}
-	if location == "" {
-		location = "us-central1"
+	if modelRegion == "" {
+		modelRegion = "global"
 	}
 	return
 }
@@ -209,7 +228,18 @@ func GenerateRawContentWithModel(db *gorm.DB, requestedModel, systemInstruction,
 			return "", fmt.Errorf("Google Cloud Project ID is required for Vertex AI ADC mode. Please enter your GCP Project ID in Agent Settings")
 		}
 
-		endpoint = fmt.Sprintf("https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent", location, projectID, location, model)
+		if location == "" || strings.HasPrefix(model, "gemini-3.") {
+			location = "global"
+		}
+
+		var endpointHost string
+		if location == "global" {
+			endpointHost = "aiplatform.googleapis.com"
+		} else {
+			endpointHost = fmt.Sprintf("%s-aiplatform.googleapis.com", location)
+		}
+
+		endpoint = fmt.Sprintf("https://%s/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent", endpointHost, projectID, location, model)
 
 		req, err = http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(bodyBytes))
 		if err != nil {
@@ -234,8 +264,7 @@ func GenerateRawContentWithModel(db *gorm.DB, requestedModel, systemInstruction,
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := geminiHTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("Gemini request failed: %w", err)
 	}
@@ -435,13 +464,93 @@ Synthesize a concise, high-impact Daily Executive TL;DR & Strategic Analysis in 
 	return tldr, nil
 }
 
-// FetchAvailableModels returns a list of supported Gemini 3 & frontier models
+// GenerateTimespanOverview generates an executive multi-stream overview covering a specified time span
+func GenerateTimespanOverview(db *gorm.DB, items []database.NewsItem, timeSpanTitle string) (string, error) {
+	if len(items) == 0 {
+		return fmt.Sprintf("No intelligence items recorded for %s.", timeSpanTitle), nil
+	}
+
+	var itemsSummary strings.Builder
+	for idx, it := range items {
+		if idx >= 40 {
+			break
+		}
+		dateStr := it.PubDate
+		if dateStr == "" {
+			dateStr = it.CreatedAt.Format("Jan 02")
+		}
+		itemsSummary.WriteString(fmt.Sprintf("- [%s | %s | %s] %s: %s\n", it.Company, it.Category, dateStr, it.Title, it.Summary))
+	}
+
+	systemInstruction := `You are an elite Executive AI & Cloud Intelligence Analyst.
+Analyze the multi-stream intelligence developments across Frontier Models, Google Cloud, AI Research Papers, AI Business & Infrastructure, and OSS Tooling over the specified timeframe.
+Synthesize a comprehensive, high-impact Executive Intelligence Overview in GitHub-style Markdown structured in 4 sections:
+1. 🚀 **Frontier & Architecture Breakthroughs** (Key model weights, multimodal reasoning, benchmark scores)
+2. ☁️ **Enterprise Cloud & Infrastructure Movements** (Compute, TPUs/GPUs, managed orchestration, and platform shifts)
+3. 🔬 **Notable Academic & Open-Source Advances** (Prominent preprints, agent frameworks, and tooling releases)
+4. 🔮 **Strategic Executive Takeaway** (Core synthesis of what these shifts mean for enterprise technology leaders)`
+
+	userPrompt := fmt.Sprintf("Here are the top indexed intelligence records from %s (%d articles):\n\n%s\n\nPlease produce the comprehensive Executive Timespan Overview.", timeSpanTitle, len(items), itemsSummary.String())
+
+	overview, err := GenerateRawContent(db, systemInstruction, userPrompt)
+	if err != nil {
+		log.Printf("[Agent] Gemini timespan overview generation failed: %v. Falling back to heuristic synthesis.", err)
+		dateStr := time.Now().Format("Jan 02, 2006")
+		return fmt.Sprintf(`### ⚡ Executive Overview — %s (%s)
+
+#### 1. Frontier & Architecture Trends
+- Tracking %d indexed developments across frontier AI, research papers, and cloud releases.
+
+#### 2. Infrastructure & Tooling
+- Key movements captured across Google Cloud Vertex AI, open-source model repositories, and enterprise AI stacks.
+
+#### 3. Strategic Summary
+- Continuous velocity across foundational model reasoning, agent frameworks, and inference optimization.`, timeSpanTitle, dateStr, len(items)), nil
+	}
+	return overview, nil
+}
+
+// GenerateArticleSummary generates a structured technical and strategic synthesis for a specific article
+func GenerateArticleSummary(db *gorm.DB, item database.NewsItem, fullText string) (string, error) {
+	content := strings.TrimSpace(fullText)
+	if content == "" {
+		content = strings.TrimSpace(item.Summary)
+	}
+	if len(content) > 15000 {
+		content = content[:15000] + "\n\n[Content truncated for analysis]"
+	}
+
+	systemInstruction := `You are a Principal AI Systems Architect and Senior Cloud Strategist.
+Analyze the provided article/release/paper and produce a structured, high-value Technical & Strategic Article Summary in GitHub-style Markdown.
+Structure your synthesis into:
+1. 📌 **Executive Overview & Key Announcements** (Core focus, problems addressed, major features/findings)
+2. 🏗️ **Technical Architecture & Method** (Underlying mechanisms, system topology, model architectures, algorithms, integrations)
+3. 📊 **Key Capabilities & Metrics** (Reported benchmark metrics, latency/cost improvements, empirical evidence)
+4. 💡 **Strategic Takeaway** (Key takeaway for AI practitioners and enterprise cloud teams)`
+
+	userPrompt := fmt.Sprintf("Article Title: %s\nCompany / Source: %s\nCategory: %s\nDirect Link: %s\n\nFull Grounded Content:\n%s\n\nPlease produce the structured technical article summary.",
+		item.Title, item.Company, item.Category, item.Link, content)
+
+	summary, err := GenerateRawContent(db, systemInstruction, userPrompt)
+	if err != nil {
+		log.Printf("[Agent] Gemini article summary failed: %v. Using fallback summary.", err)
+		if item.Summary != "" {
+			return fmt.Sprintf("### 📌 Overview\n\n%s\n\n*Reference: [%s](%s)*", item.Summary, item.Company, item.Link), nil
+		}
+		return "Summary generation temporarily unavailable.", nil
+	}
+	return summary, nil
+}
+
+// GenerateArticleArchitectureSummary is an alias for GenerateArticleSummary for backwards compatibility
+func GenerateArticleArchitectureSummary(db *gorm.DB, item database.NewsItem, fullText string) (string, error) {
+	return GenerateArticleSummary(db, item, fullText)
+}
+
+// FetchAvailableModels returns a list of supported Gemini & Vertex AI models
 func FetchAvailableModels(db *gorm.DB) []string {
 	return []string{
 		"gemini-3.7-flash",
-		"gemini-3.1-pro",
-		"gemini-3.5-flash",
-		"gemini-3.5-flash-lite",
 		"gemini-2.5-flash",
 		"gemini-2.5-pro",
 		"gemini-2.0-flash",

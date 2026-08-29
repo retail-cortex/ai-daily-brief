@@ -1,0 +1,22 @@
+# Production Environment Variables Example for MCP Server
+# Copy to prod.tfvars and specify your Google Cloud project details.
+
+environment           = "prod"
+service_name          = "ai-daily-brief-mcp"
+region                = "us-central1"
+image_tag             = "latest"
+build_image_on_apply  = false
+
+# Cloud Run High Availability Scaling
+min_instances         = 1
+max_instances         = 20
+allow_unauthenticated = false
+
+# AlloyDB Provisioning (Set true to spin up dedicated managed AlloyDB)
+enable_alloydb        = true
+alloydb_cpu_count     = 4
+alloydb_database_name = "aibrief"
+alloydb_user_name     = "aibrief"
+vpc_network_name      = "ai-daily-brief-vpc"
+vpc_subnet_name       = "ai-daily-brief-subnet"
+vpc_subnet_cidr       = "10.20.0.0/24"

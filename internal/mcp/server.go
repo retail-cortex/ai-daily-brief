@@ -59,8 +59,13 @@ func NewServer(db *gorm.DB) *Server {
 
 	// Cloud Run CORS configuration
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
 		if c.Request.Method == "OPTIONS" {
@@ -220,8 +225,13 @@ func (s *Server) setupRoutes() {
 		s.mu.RUnlock()
 
 		if exists && ch != nil {
-			ch <- string(respBytes)
-			c.JSON(http.StatusAccepted, gin.H{"status": "accepted"})
+			select {
+			case ch <- string(respBytes):
+				c.JSON(http.StatusAccepted, gin.H{"status": "accepted"})
+			default:
+				log.Printf("[MCP SSE] Buffer full for session %s, dropping frame", sessionID)
+				c.JSON(http.StatusOK, resp)
+			}
 		} else {
 			c.JSON(http.StatusOK, resp)
 		}

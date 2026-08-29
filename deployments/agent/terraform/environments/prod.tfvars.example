@@ -1,0 +1,13 @@
+# Production Environment Variables Example for A2A Agent
+# Copy to prod.tfvars and specify your Google Cloud project details.
+
+project_id            = "your-gcp-prod-project-id"
+region                = "us-central1"
+environment           = "prod"
+service_name          = "ai-daily-brief-agent"
+mcp_service_name      = "ai-daily-brief-mcp"
+image_tag             = "latest"
+build_image_on_apply  = false
+min_instances         = 1
+max_instances         = 20
+allow_unauthenticated = false

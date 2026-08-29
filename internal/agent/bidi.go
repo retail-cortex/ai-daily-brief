@@ -38,6 +38,30 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 64 * 1024,
 }
 
+// safeConn provides thread-safe write and close operations for gorilla/websocket
+type safeConn struct {
+	*websocket.Conn
+	mu sync.Mutex
+}
+
+func (s *safeConn) SafeWriteMessage(messageType int, data []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.Conn.WriteMessage(messageType, data)
+}
+
+func (s *safeConn) SafeWriteJSON(v interface{}) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.Conn.WriteJSON(v)
+}
+
+func (s *safeConn) SafeClose() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.Conn.Close()
+}
+
 type BidiVoiceConfig struct {
 	VoiceName string `json:"voiceName"`
 }
@@ -71,12 +95,13 @@ type BidiSetupMessage struct {
 
 // HandleBidiWebSocket proxies real-time bidirectional audio between the React client and Google Gemini Live API
 func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	clientConn, err := upgrader.Upgrade(w, r, nil)
+	rawClientConn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("[Bidi] Client WebSocket upgrade failed: %v", err)
 		return
 	}
-	defer clientConn.Close()
+	clientConn := &safeConn{Conn: rawClientConn}
+	defer clientConn.SafeClose()
 
 	articleID := r.URL.Query().Get("article_id")
 	voice := r.URL.Query().Get("voice")
@@ -102,7 +127,7 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		creds, token, err := getVertexCredentials(ctx)
 		cancel()
 		if err != nil {
-			clientConn.WriteJSON(map[string]interface{}{
+			clientConn.SafeWriteJSON(map[string]interface{}{
 				"error": fmt.Sprintf("Vertex AI ADC error: %v", err),
 			})
 			return
@@ -111,17 +136,26 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			projectID = creds.ProjectID
 		}
 		if projectID == "" {
-			clientConn.WriteJSON(map[string]interface{}{
+			clientConn.SafeWriteJSON(map[string]interface{}{
 				"error": "Google Cloud Project ID is required for Vertex AI ADC mode. Please enter your GCP Project ID in Agent Settings",
 			})
 			return
 		}
-		upstreamURL = fmt.Sprintf("wss://%s-aiplatform.googleapis.com/ws/google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent", location)
+		if location == "" {
+			location = "global"
+		}
+		var wsHost string
+		if location == "global" {
+			wsHost = "aiplatform.googleapis.com"
+		} else {
+			wsHost = fmt.Sprintf("%s-aiplatform.googleapis.com", location)
+		}
+		upstreamURL = fmt.Sprintf("wss://%s/ws/google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent", wsHost)
 		setupModel = fmt.Sprintf("projects/%s/locations/%s/publishers/google/models/%s", projectID, location, rawModel)
 		header.Set("Authorization", "Bearer "+token)
 	} else {
 		if apiKey == "" {
-			clientConn.WriteJSON(map[string]interface{}{
+			clientConn.SafeWriteJSON(map[string]interface{}{
 				"error": "Gemini API key is not configured. Please enter your API key in Agent Settings or switch to Vertex AI (ADC)",
 			})
 			return
@@ -134,19 +168,20 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 	dialer := websocket.DefaultDialer
 	dialer.HandshakeTimeout = 15 * time.Second
-	geminiConn, resp, err := dialer.Dial(upstreamURL, header)
+	rawGeminiConn, resp, err := dialer.Dial(upstreamURL, header)
 	if err != nil {
 		status := 0
 		if resp != nil {
 			status = resp.StatusCode
 		}
 		log.Printf("[Bidi] Upstream Gemini Live connection failed (status %d): %v", status, err)
-		clientConn.WriteJSON(map[string]interface{}{
+		clientConn.SafeWriteJSON(map[string]interface{}{
 			"error": fmt.Sprintf("Failed to connect to Gemini Live service (%d): %v", status, err),
 		})
 		return
 	}
-	defer geminiConn.Close()
+	geminiConn := &safeConn{Conn: rawGeminiConn}
+	defer geminiConn.SafeClose()
 
 	// Build Grounding System Instruction
 	systemPrompt := "You are a real-time conversational AI voice agent specializing in AI and Google Cloud intelligence. Answer questions naturally, concisely, and conversationally."
@@ -190,14 +225,14 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	}
 
 	setupBytes, _ := json.Marshal(setupMsg)
-	if err := geminiConn.WriteMessage(websocket.TextMessage, setupBytes); err != nil {
+	if err := geminiConn.SafeWriteMessage(websocket.TextMessage, setupBytes); err != nil {
 		log.Printf("[Bidi] Error sending setup message to Gemini: %v", err)
-		clientConn.WriteJSON(map[string]interface{}{"error": "Failed to initialize Gemini Live session"})
+		clientConn.SafeWriteJSON(map[string]interface{}{"error": "Failed to initialize Gemini Live session"})
 		return
 	}
 
 	// Notify client that live session is connected & ready
-	clientConn.WriteJSON(map[string]interface{}{
+	clientConn.SafeWriteJSON(map[string]interface{}{
 		"connected": true,
 		"voice":     voice,
 		"model":     setupModel,
@@ -213,10 +248,10 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		for {
 			msgType, p, err := clientConn.ReadMessage()
 			if err != nil {
-				geminiConn.Close()
+				geminiConn.SafeClose()
 				break
 			}
-			if err := geminiConn.WriteMessage(msgType, p); err != nil {
+			if err := geminiConn.SafeWriteMessage(msgType, p); err != nil {
 				log.Printf("[Bidi] Upstream Gemini write error: %v", err)
 				break
 			}
@@ -230,10 +265,10 @@ func HandleBidiWebSocket(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			msgType, p, err := geminiConn.ReadMessage()
 			if err != nil {
 				log.Printf("[Bidi] Upstream Gemini read error: %v", err)
-				clientConn.Close()
+				clientConn.SafeClose()
 				break
 			}
-			if err := clientConn.WriteMessage(msgType, p); err != nil {
+			if err := clientConn.SafeWriteMessage(msgType, p); err != nil {
 				log.Printf("[Bidi] Client write error: %v", err)
 				break
 			}

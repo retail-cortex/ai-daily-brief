@@ -44,6 +44,5 @@ go_test(
         "//internal/security",
         "@com_github_glebarez_sqlite//:sqlite",
         "@io_gorm_gorm//:gorm",
-        "@io_gorm_gorm//logger",
     ],
 )

@@ -19,6 +19,11 @@ go_library(
     srcs = ["security.go"],
     importpath = "ai-daily-brief/internal/security",
     visibility = ["//:__subpackages__"],
+    deps = [
+        "@com_google_cloud_go_compute_metadata//:metadata",
+        "@com_google_cloud_go_secretmanager//apiv1",
+        "@com_google_cloud_go_secretmanager//apiv1/secretmanagerpb",
+    ],
 )
 
 go_test(

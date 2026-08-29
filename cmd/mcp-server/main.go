@@ -25,7 +25,7 @@ import (
 )
 
 func main() {
-	portFlag := flag.String("port", "", "Port to listen on (defaults to $PORT or 8080 for Cloud Run)")
+	portFlag := flag.String("port", "", "Port to listen on (defaults to $PORT, config, or 8080 for Cloud Run)")
 	stdioFlag := flag.Bool("stdio", false, "Run in stdio mode for local desktop MCP clients")
 	dbFlag := flag.String("db", "", "Path to SQLite database or AlloyDB / PostgreSQL DSN")
 	dsnFlag := flag.String("dsn", "", "Google Cloud AlloyDB / PostgreSQL DSN (e.g. postgres://user:pass@host:5432/dbname)")
@@ -33,6 +33,9 @@ func main() {
 
 	cfg := config.LoadConfig()
 	dbPath := cfg.GetDatabaseDSN()
+	if envDSN := os.Getenv("ALLOYDB_DATABASE_URL"); envDSN != "" {
+		dbPath = envDSN
+	}
 	if *dsnFlag != "" {
 		dbPath = *dsnFlag
 	} else if *dbFlag != "" {
@@ -57,6 +60,9 @@ func main() {
 	port := *portFlag
 	if port == "" {
 		port = os.Getenv("PORT")
+	}
+	if port == "" {
+		port = cfg.GetPort()
 	}
 	if port == "" {
 		port = "8080"

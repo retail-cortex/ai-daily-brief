@@ -67,6 +67,13 @@ alias(
     visibility = ["//visibility:public"],
 )
 
+# Configuration & secret encryption tool alias
+alias(
+    name = "modenv",
+    actual = "@com_github_rrmcguinness_modenv//cmd/modenv:modenv",
+    visibility = ["//visibility:public"],
+)
+
 # Documentation aliases powered by rules_hugo
 alias(
     name = "docs",

@@ -1,10 +1,8 @@
-# MCP Server Test Configuration Example
-port = "8080"
-cron_schedule = "0 8 * * *"
-database_path = ":memory:"
+# MCP Server Test Configuration Example (Overrides only)
 
-[gemini]
-model = "gemini-3.7-flash"
-auth_mode = "vertex_adc"
-vertex_project_id = "test-gcp-project"
-vertex_location = "us-central1"
+[database]
+dialect = "sqlite"
+address = ":memory:"
+
+[google_cloud]
+project_id = "test-gcp-project"

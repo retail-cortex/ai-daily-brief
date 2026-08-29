@@ -19,13 +19,16 @@ go_library(
     srcs = [
         "agent.go",
         "client.go",
+        "protocol.go",
         "server.go",
     ],
     importpath = "ai-daily-brief/internal/a2a",
     visibility = ["//:__subpackages__"],
     deps = [
         "//internal/config",
+        "//internal/mcp",
         "@com_github_gin_gonic_gin//:gin",
+        "@com_google_cloud_go_compute_metadata//:metadata",
     ],
 )
 
@@ -37,12 +40,12 @@ go_test(
         "//configs/mcp:files",
     ],
     embed = [":a2a"],
-    env = {
-        "MODENV_PREFIX": "configs/agent",
-    },
     deps = [
         "//internal/config",
         "//internal/database",
         "//internal/mcp",
+        "@com_github_glebarez_sqlite//:sqlite",
+        "@io_gorm_gorm//:gorm",
+        "@io_gorm_gorm//logger",
     ],
 )

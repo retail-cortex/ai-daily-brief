@@ -31,6 +31,12 @@ func main() {
 	cfg := config.LoadAgentConfig()
 	if *mcpURLFlag != "" {
 		cfg.MCPServerURL = *mcpURLFlag
+		if cfg.MCPServers == nil {
+			cfg.MCPServers = make(map[string]config.MCPServerConfig)
+		}
+		srv := cfg.GetMCPServer("daily_brief")
+		srv.URL = *mcpURLFlag
+		cfg.MCPServers["daily_brief"] = srv
 	}
 
 	port := *portFlag
@@ -38,13 +44,14 @@ func main() {
 		port = os.Getenv("PORT")
 	}
 	if port == "" {
-		port = cfg.Port
+		port = cfg.GetPort()
 	}
 	if port == "" {
 		port = "8081"
 	}
 
-	log.Printf("[A2A Agent] Initializing agent '%s' (MCP Control Plane: %s)...", cfg.AgentName, cfg.MCPServerURL)
+	mcpCfg := cfg.GetMCPServer("daily_brief")
+	log.Printf("[A2A Agent] Initializing agent '%s' (MCP Control Plane: %s)...", cfg.AgentName, mcpCfg.URL)
 	if err := a2a.RunHTTPServer(cfg, port); err != nil {
 		log.Fatalf("Fatal A2A agent error: %v", err)
 	}

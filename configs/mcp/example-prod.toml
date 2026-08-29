@@ -1,0 +1,12 @@
+# MCP Server Production Profile Configuration Example
+
+[server]
+cron_schedule = "0 8 * * *"
+
+[database]
+dialect = "postgres"
+database = "aibrief_prod"
+require_ssl = true
+
+[google_cloud]
+project_region = "us-central1"

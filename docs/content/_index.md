@@ -67,4 +67,6 @@ Explore the comprehensive guides below:
 - **[Cloud Run Deployment](/docs/cloud-run/)**: Building container images, configuring Cloud Run probes, and IAM service-to-service security.
 - **[Google Cloud AlloyDB](/docs/alloydb/)**: Setting up AlloyDB for PostgreSQL, connection pooling, and profile management (`.env.test.toml` vs `.env.integration.toml`).
 - **[Agent-to-Agent (A2A) Service](/docs/a2a-agent/)**: Autonomous Cloud Run agent service consuming the MCP control plane with Google ADK / Gemini workflows.
+- **[Gemini Enterprise Integration](/docs/gemini_enterprise/)**: Complete guide for registering the A2A Agent & MCP Server into Gemini Enterprise / Discovery Engine Agent Registry.
 - **[REST API Reference](/docs/rest-api/)**: Complete endpoint reference for items, crawls, settings, and multimodal live streaming.
+- **[Troubleshooting Guide](/docs/troubleshooting/)**: Comprehensive debugging workflows, AlloyDB auth proxy local tunnels, and IAM troubleshooting.

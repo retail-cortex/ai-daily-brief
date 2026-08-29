@@ -1,0 +1,13 @@
+# Development Environment Variables Example for A2A Agent
+# Copy to dev.tfvars and specify your Google Cloud project details.
+
+project_id            = "your-gcp-dev-project-id"
+region                = "us-central1"
+environment           = "dev"
+service_name          = "ai-daily-brief-agent"
+mcp_service_name      = "ai-daily-brief-mcp"
+image_tag             = "latest"
+build_image_on_apply  = false
+min_instances         = 0
+max_instances         = 5
+allow_unauthenticated = false

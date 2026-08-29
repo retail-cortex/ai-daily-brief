@@ -16,6 +16,7 @@ package database
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -84,6 +85,52 @@ type ChatMessage struct {
 
 var DB *gorm.DB
 
+// ensurePostgresDatabaseExists connects to default postgres admin DB and provisions target database if missing
+func ensurePostgresDatabaseExists(dsn string) {
+	parsedURL, err := url.Parse(dsn)
+	if err != nil {
+		return
+	}
+	dbName := strings.TrimPrefix(parsedURL.Path, "/")
+	if dbName == "" || dbName == "postgres" || dbName == "template1" {
+		return
+	}
+
+	adminURL := *parsedURL
+	adminURL.Path = "/postgres"
+	adminDSN := adminURL.String()
+
+	adminDB, err := gorm.Open(postgres.Open(adminDSN), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	if err != nil {
+		return
+	}
+	sqlDB, err := adminDB.DB()
+	if err != nil {
+		return
+	}
+	defer sqlDB.Close()
+
+	var exists bool
+	_ = sqlDB.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)", dbName).Scan(&exists)
+	if !exists {
+		validName := true
+		for _, r := range dbName {
+			if !(r >= 'a' && r <= 'z') && !(r >= 'A' && r <= 'Z') && !(r >= '0' && r <= '9') && r != '_' {
+				validName = false
+				break
+			}
+		}
+		if validName {
+			_, createErr := sqlDB.Exec("CREATE DATABASE \"" + dbName + "\"")
+			if createErr == nil {
+				log.Printf("[Database] Successfully created database %q on AlloyDB / PostgreSQL", dbName)
+			}
+		}
+	}
+}
+
 // InitDB initializes database connection to Google Cloud AlloyDB / PostgreSQL or local SQLite
 func InitDB(customPathOrDSN string) (*gorm.DB, error) {
 	dsn := customPathOrDSN
@@ -99,16 +146,33 @@ func InitDB(customPathOrDSN string) (*gorm.DB, error) {
 	var dbType string
 
 	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") || strings.Contains(dsn, "host=") {
+		ensurePostgresDatabaseExists(dsn)
 		dialector = postgres.Open(dsn)
 		dbType = "Google Cloud AlloyDB / PostgreSQL"
 	} else {
 		dbPath := dsn
 		if dbPath == "" {
 			dbDir := "data"
-			_ = os.MkdirAll(dbDir, 0700)
+			if err := os.MkdirAll(dbDir, 0755); err != nil {
+				dbDir = filepath.Join(os.TempDir(), "ai_daily_brief_data")
+				_ = os.MkdirAll(dbDir, 0755)
+			}
 			dbPath = filepath.Join(dbDir, "ai_daily_brief.db")
+		} else if dbPath != ":memory:" {
+			dbDir := filepath.Dir(dbPath)
+			if dbDir != "" && dbDir != "." {
+				if err := os.MkdirAll(dbDir, 0755); err != nil {
+					tmpDir := filepath.Join(os.TempDir(), "ai_daily_brief_data")
+					_ = os.MkdirAll(tmpDir, 0755)
+					dbPath = filepath.Join(tmpDir, filepath.Base(dbPath))
+				}
+			}
 		}
-		dialector = sqlite.Open(dbPath)
+		sqliteDSN := dbPath
+		if dbPath != ":memory:" && !strings.Contains(dbPath, "?") {
+			sqliteDSN = dbPath + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)"
+		}
+		dialector = sqlite.Open(sqliteDSN)
 		dbType = "SQLite (" + dbPath + ")"
 	}
 
@@ -117,10 +181,21 @@ func InitDB(customPathOrDSN string) (*gorm.DB, error) {
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
-		return nil, err
+		// Fallback to in-memory SQLite if file cannot be opened
+		if !strings.HasPrefix(dsn, "postgres://") && !strings.HasPrefix(dsn, "postgresql://") && !strings.Contains(dsn, "host=") {
+			log.Printf("[Database] Notice: failed to open SQLite file (%v). Falling back to ephemeral in-memory SQLite.", err)
+			dialector = sqlite.Open("file::memory:?cache=shared")
+			dbType = "SQLite (:memory: fallback)"
+			DB, err = gorm.Open(dialector, &gorm.Config{
+				Logger: logger.Default.LogMode(logger.Warn),
+			})
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Configure connection pooling for AlloyDB / PostgreSQL
+	// Configure connection pooling
 	sqlDB, err := DB.DB()
 	if err == nil {
 		sqlDB.SetMaxOpenConns(25)

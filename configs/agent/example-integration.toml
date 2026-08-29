@@ -1,11 +1,5 @@
-# A2A Agent Cloud Run Integration Configuration Example
-port = "8081"
-agent_name = "ai-daily-brief-a2a-agent"
-mcp_server_url = "https://ai-daily-brief-mcp-retail-cortex.a.run.app"
-timeout_seconds = 60
+# Example A2A Agent Cloud Run Integration Configuration Overrides
 
-[gemini]
-model = "gemini-3.7-flash"
-auth_mode = "vertex_adc"
-vertex_project_id = "retail-cortex-prod"
-vertex_location = "us-central1"
+[mcp_servers.daily_brief]
+url = "https://ai-daily-brief-mcp.a.run.app"
+timeout_seconds = 60

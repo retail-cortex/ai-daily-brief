@@ -5,54 +5,90 @@ weight: 4
 
 # ☁️ Google Cloud Run Deployment
 
-Deploying AI Daily Brief as a **Google Cloud Run** service allows other agent services (such as **Vertex AI Agent Engine** or Cloud Run microservices) to call it as an intelligent control plane.
+AI Daily Brief provides standalone, multi-stage container configurations and Terraform stacks for both the **MCP Server** and the **A2A Agent**.
 
 ---
 
-## 1. Container Building via Bazel
+## 1. Directory Structure
 
-Compile the pure Linux ARM64 or AMD64 container binaries directly using Bazel:
+```text
+deployments/
+├── agent/                         # A2A Agent Service Deployment
+│   ├── Dockerfile
+│   ├── cloudbuild.yaml
+│   ├── deploy.sh
+│   └── terraform/                 # Agent Cloud Run + Vertex AI IAM
+│       ├── main.tf
+│       ├── variables.tf
+│       ├── outputs.tf
+│       └── environments/
+│           ├── dev.tfvars
+│           └── prod.tfvars
+└── mcp/                           # MCP Server Service Deployment
+    ├── Dockerfile
+    ├── cloudbuild.yaml
+    ├── deploy.sh
+    └── terraform/                 # MCP Cloud Run + AlloyDB + VPC + Secret Manager
+        ├── main.tf
+        ├── variables.tf
+        ├── outputs.tf
+        └── environments/
+            ├── dev.tfvars
+            └── prod.tfvars
+```
+
+---
+
+## 2. Container Building via Bazel
+
+Compile Linux ARM64 or AMD64 container binaries directly using Bazel:
 
 ```bash
-# Build Linux x86_64 Cloud Run binary
+# Build Linux AMD64 Cloud Run binaries
 bazel build //cmd/mcp-server:mcp_server_linux_amd64
+bazel build //cmd/a2a-agent:a2a_agent_linux_amd64
 
-# Build Linux ARM64 Cloud Run binary
+# Build Linux ARM64 Cloud Run binaries
 bazel build //cmd/mcp-server:mcp_server_linux_arm64
+bazel build //cmd/a2a-agent:a2a_agent_linux_arm64
 ```
 
 ---
 
-## 2. Dockerfile Configuration
+## 3. Deploying the MCP Server
 
-```dockerfile
-FROM gcr.io/distroless/static-debian12:nonroot
-WORKDIR /app
-COPY bazel-bin/cmd/mcp-server/mcp_server_linux_amd64_/mcp_server_linux_amd64 /app/server
-COPY .env.integration.toml /app/.env.toml
-ENV PORT=8080
-EXPOSE 8080
-ENTRYPOINT ["/app/server"]
-```
-
----
-
-## 3. Deploying with gcloud
-
+### Via Deployment Script:
 ```bash
-gcloud run deploy ai-daily-brief-mcp \
-  --image gcr.io/YOUR_PROJECT_ID/ai-daily-brief-mcp:latest \
-  --platform managed \
-  --region us-central1 \
-  --set-env-vars ALLOYDB_DATABASE_URL="postgres://postgres:PASS@ALLOYDB_IP:5432/ai_daily_brief?sslmode=require" \
-  --set-env-vars GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID" \
-  --service-account "ai-daily-brief-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
-  --allow-unauthenticated
+./deployments/mcp/deploy.sh
+```
+
+### Via Terraform:
+```bash
+cd deployments/mcp/terraform
+terraform init
+terraform apply -var-file=environments/dev.tfvars
 ```
 
 ---
 
-## 4. Container Probes
+## 4. Deploying the A2A Agent
 
-- **Liveness Probe**: `GET /healthz`
-- **Readiness Probe**: `GET /healthz`
+### Via Deployment Script:
+```bash
+./deployments/agent/deploy.sh
+```
+
+### Via Terraform:
+```bash
+cd deployments/agent/terraform
+terraform init
+terraform apply -var-file=environments/dev.tfvars
+```
+
+---
+
+## 5. Container Probes & Ingress
+
+- **MCP Server Probes**: Startup probe on TCP `:8080`, Liveness on HTTP `/healthz`.
+- **A2A Agent Probes**: Startup probe on TCP `:8080`, Liveness on HTTP `/healthz`.
+- **Service-to-Service Auth**: The Agent authenticates to the MCP server using its dedicated Cloud Run service account (`ai-daily-brief-agent-sa-${env}`) bound to `roles/run.invoker`.

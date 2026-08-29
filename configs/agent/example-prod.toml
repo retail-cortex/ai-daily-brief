@@ -1,0 +1,16 @@
+# A2A Agent Production Profile Configuration Example
+
+agent_name = "ai-daily-brief-a2a-agent-prod"
+
+[google_cloud]
+project_id = "your-gcp-prod-project-id"
+project_region = "us-central1"
+
+[mcp_servers.daily_brief]
+url = "https://ai-daily-brief-mcp-prod.run.app"
+timeout_seconds = 60
+
+[gemini.default]
+model = "gemini-3.7-flash"
+region = "us-central1"
+auth_mode = "vertex_adc"

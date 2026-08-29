@@ -1,0 +1,22 @@
+# Development Environment Variables Example for MCP Server
+# Copy to dev.tfvars and specify your Google Cloud project details.
+
+environment           = "dev"
+service_name          = "ai-daily-brief-mcp"
+region                = "us-central1"
+image_tag             = "latest"
+build_image_on_apply  = false
+
+# Cloud Run Scaling
+min_instances         = 0
+max_instances         = 5
+allow_unauthenticated = false
+
+# AlloyDB Provisioning (Managed Google Cloud AlloyDB Instance)
+enable_alloydb        = true
+alloydb_cpu_count     = 2
+alloydb_database_name = "aibrief"
+alloydb_user_name     = "aibrief"
+vpc_network_name      = "ai-daily-brief-vpc"
+vpc_subnet_name       = "ai-daily-brief-subnet"
+vpc_subnet_cidr       = "10.10.0.0/24"

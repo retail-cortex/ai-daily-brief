@@ -21,6 +21,7 @@ For detailed architecture guides, MCP tool specifications, Cloud Run deployment 
 - 🏛️ **[System Architecture](https://retail-cortex.github.io/ai-daily-brief/docs/architecture/)**: Parallel goroutine crawler (<900ms execution), SHA-256 deduplication, dynamic HTML extraction, and dual protocol plane.
 - 🤖 **[Model Context Protocol (MCP) & A2UI](https://retail-cortex.github.io/ai-daily-brief/docs/mcp-server/)**: JSON-RPC 2.0 tool definitions, A2UI card schemas, and Server-Sent Events (SSE) streaming.
 - 🤖 **[Agent-to-Agent (A2A) Service](https://retail-cortex.github.io/ai-daily-brief/docs/a2a-agent/)**: Autonomous Cloud Run agent service consuming the MCP control plane with Google ADK / Gemini workflows.
+- 🌐 **[Gemini Enterprise Integration](https://retail-cortex.github.io/ai-daily-brief/docs/gemini_enterprise/)**: Cloud Run IAM service identity bindings, Discovery Engine setup, and Agent Card publishing.
 - ☁️ **[Google Cloud Run Deployment](https://retail-cortex.github.io/ai-daily-brief/docs/cloud-run/)**: Cross-compiling Linux container binaries, Distroless images, `gcloud run deploy`, and container probes (`/healthz`).
 - 💾 **[Google Cloud AlloyDB](https://retail-cortex.github.io/ai-daily-brief/docs/alloydb/)**: AlloyDB for PostgreSQL connection strings, production connection pooling, GORM auto-migrations, and environment profiles.
 - 📡 **[REST API Reference](https://retail-cortex.github.io/ai-daily-brief/docs/rest-api/)**: Complete endpoint reference for all HTTP routes and the Multimodal Live Bidi WebSocket (`/ws/live`).
@@ -60,7 +61,7 @@ bazel run //:serve-docs
 │   ├── database/         # AlloyDB / PostgreSQL & SQLite GORM layer
 │   ├── mailer/           # HTML email digest builder
 │   ├── mcp/              # MCP JSON-RPC protocol, REST APIs & A2UI engine
-│   └── security/         # Stable AES-256 key management
+│   └── security/         # Google Cloud Secret Manager & AES-256 encryption
 ├── BUILD.bazel           # Root Bazel build definitions & aliases
 └── MODULE.bazel          # Bazel 9 Bzlmod dependency configuration
 ```

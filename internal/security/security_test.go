@@ -15,6 +15,7 @@
 package security
 
 import (
+	"context"
 	"os"
 	"testing"
 )
@@ -45,6 +46,29 @@ func TestEncryptDecrypt(t *testing.T) {
 	}
 }
 
+func TestEncryptDecryptWithContext(t *testing.T) {
+	testKey := "context-key-54321"
+	os.Setenv("ENCRYPTION_KEY", testKey)
+	defer os.Unsetenv("ENCRYPTION_KEY")
+
+	ctx := context.Background()
+	plainText := "vertex-project-credential-token"
+
+	encrypted, err := EncryptWithContext(ctx, plainText)
+	if err != nil {
+		t.Fatalf("EncryptWithContext failed: %v", err)
+	}
+
+	decrypted, err := DecryptWithContext(ctx, encrypted)
+	if err != nil {
+		t.Fatalf("DecryptWithContext failed: %v", err)
+	}
+
+	if decrypted != plainText {
+		t.Errorf("Decrypted %q != expected %q", decrypted, plainText)
+	}
+}
+
 func TestEncryptDecryptEmpty(t *testing.T) {
 	encrypted, err := Encrypt("")
 	if err != nil {
@@ -60,5 +84,38 @@ func TestEncryptDecryptEmpty(t *testing.T) {
 	}
 	if decrypted != "" {
 		t.Errorf("Expected empty string for Decrypt(''), got %q", decrypted)
+	}
+}
+
+func TestGetSecretFallbackEnv(t *testing.T) {
+	os.Setenv("GEMINI_API_KEY", "ai-studio-sample-api-key-test")
+	defer os.Unsetenv("GEMINI_API_KEY")
+
+	ctx := context.Background()
+	secretVal, err := GetSecret(ctx, "gemini-api-key")
+	if err != nil {
+		t.Fatalf("GetSecret fallback failed: %v", err)
+	}
+
+	if secretVal != "ai-studio-sample-api-key-test" {
+		t.Errorf("GetSecret = %q; want %q", secretVal, "ai-studio-sample-api-key-test")
+	}
+}
+
+func TestGetGCPProjectID(t *testing.T) {
+	orig := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	defer func() {
+		if orig != "" {
+			os.Setenv("GOOGLE_CLOUD_PROJECT", orig)
+		} else {
+			os.Unsetenv("GOOGLE_CLOUD_PROJECT")
+		}
+		ResetProjectIDCache()
+	}()
+
+	ResetProjectIDCache()
+	os.Setenv("GOOGLE_CLOUD_PROJECT", "custom-gcp-project-123")
+	if proj := GetGCPProjectID(); proj != "custom-gcp-project-123" {
+		t.Errorf("GetGCPProjectID() = %q; want %q", proj, "custom-gcp-project-123")
 	}
 }

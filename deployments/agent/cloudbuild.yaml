@@ -1,0 +1,16 @@
+# Copyright 2026 Retail Cortex
+#
+# Cloud Build pipeline for packaging AI Daily Brief A2A Agent container image
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '$_IMAGE_URL'
+      - '-f'
+      - 'deployments/agent/Dockerfile'
+      - '.'
+
+images:
+  - '$_IMAGE_URL'

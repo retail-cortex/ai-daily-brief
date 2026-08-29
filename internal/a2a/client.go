@@ -21,8 +21,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"cloud.google.com/go/compute/metadata"
 )
 
 // MCPClient connects to and invokes tools on the AI Daily Brief MCP Server
@@ -47,8 +50,39 @@ func NewMCPClient(baseURL string, timeoutSeconds int) *MCPClient {
 	}
 }
 
-// CallTool executes a tool on the MCP server via JSON-RPC 2.0
-func (c *MCPClient) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (string, error) {
+// getIdTokenForAudience retrieves an OIDC token for Cloud Run service-to-service auth
+func (c *MCPClient) getIdTokenForAudience(audience string) string {
+	if token := os.Getenv("MCP_AUTH_TOKEN"); token != "" {
+		return strings.TrimSpace(token)
+	}
+	if strings.HasPrefix(audience, "http://localhost") || strings.HasPrefix(audience, "http://127.0.0.1") {
+		return ""
+	}
+	if metadata.OnGCE() {
+		token, err := metadata.Get("instance/service-accounts/default/identity?audience=" + audience)
+		if err == nil && token != "" {
+			return strings.TrimSpace(token)
+		}
+	}
+	return ""
+}
+
+// MCPContentBlock represents a typed item in an MCP response
+type MCPContentBlock struct {
+	Type     string                  `json:"type"`
+	Text     string                  `json:"text,omitempty"`
+	Resource *MCPResourceContent     `json:"resource,omitempty"`
+}
+
+type MCPResourceContent struct {
+	URI      string `json:"uri"`
+	MIMEType string `json:"mimeType"`
+	Text     string `json:"text,omitempty"`
+	Blob     string `json:"blob,omitempty"`
+}
+
+// CallToolBlocks executes a tool on the MCP server and returns the raw structured content blocks
+func (c *MCPClient) CallToolBlocks(ctx context.Context, toolName string, arguments map[string]interface{}) ([]MCPContentBlock, error) {
 	if arguments == nil {
 		arguments = make(map[string]interface{})
 	}
@@ -65,38 +99,39 @@ func (c *MCPClient) CallTool(ctx context.Context, toolName string, arguments map
 
 	data, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal JSON-RPC request: %w", err)
+		return nil, fmt.Errorf("failed to marshal JSON-RPC request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/mcp", bytes.NewReader(data))
 	if err != nil {
-		return "", fmt.Errorf("failed to create HTTP request: %w", err)
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	if token := c.getIdTokenForAudience(c.BaseURL); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("HTTP request to MCP server failed: %w", err)
+		return nil, fmt.Errorf("HTTP request to MCP server failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("MCP server returned HTTP %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("MCP server returned HTTP %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	var rpcResp struct {
 		JSONRPC string `json:"jsonrpc"`
 		Result  struct {
-			Content []struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
-			} `json:"content"`
-			IsError bool `json:"isError"`
+			Content []MCPContentBlock `json:"content"`
+			IsError bool              `json:"isError"`
 		} `json:"result"`
 		Error *struct {
 			Code    int    `json:"code"`
@@ -105,18 +140,30 @@ func (c *MCPClient) CallTool(ctx context.Context, toolName string, arguments map
 	}
 
 	if err := json.Unmarshal(bodyBytes, &rpcResp); err != nil {
-		return "", fmt.Errorf("failed to unmarshal JSON-RPC response: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal JSON-RPC response: %w", err)
 	}
 
 	if rpcResp.Error != nil {
-		return "", fmt.Errorf("MCP RPC error [%d]: %s", rpcResp.Error.Code, rpcResp.Error.Message)
+		return nil, fmt.Errorf("MCP RPC error [%d]: %s", rpcResp.Error.Code, rpcResp.Error.Message)
 	}
 
-	if len(rpcResp.Result.Content) > 0 {
-		return rpcResp.Result.Content[0].Text, nil
+	return rpcResp.Result.Content, nil
+}
+
+// CallTool executes a tool on the MCP server via JSON-RPC 2.0 and returns the primary text representation
+func (c *MCPClient) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (string, error) {
+	blocks, err := c.CallToolBlocks(ctx, toolName, arguments)
+	if err != nil {
+		return "", err
 	}
 
-	return string(bodyBytes), nil
+	for _, b := range blocks {
+		if b.Type == "text" && b.Text != "" {
+			return b.Text, nil
+		}
+	}
+
+	return "", nil
 }
 
 // ListArticles fetches articles from MCP
@@ -149,17 +196,17 @@ func (c *MCPClient) GetArticleContext(ctx context.Context, articleID, url string
 	return c.CallTool(ctx, "get_article_context", args)
 }
 
-// GenerateTLDR invokes strategic briefing generation
+// GenerateTLDR generates executive TLDR summary
 func (c *MCPClient) GenerateTLDR(ctx context.Context) (string, error) {
 	return c.CallTool(ctx, "generate_tldr", nil)
 }
 
-// TriggerCrawl triggers immediate crawler execution
+// TriggerCrawl triggers immediate crawl run
 func (c *MCPClient) TriggerCrawl(ctx context.Context) (string, error) {
 	return c.CallTool(ctx, "trigger_crawl", nil)
 }
 
-// GetSystemStatus fetches telemetry
+// GetSystemStatus queries system status
 func (c *MCPClient) GetSystemStatus(ctx context.Context) (string, error) {
 	return c.CallTool(ctx, "get_system_status", nil)
 }

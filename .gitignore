@@ -13,6 +13,20 @@ node_modules
 dist-ssr
 *.local
 
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+*.egg-info/
+
 # SQLite Database & Persistent App State (Contains local settings / credentials)
 data/
 *.db
@@ -20,18 +34,40 @@ data/
 *.db-wal
 *.sqlite
 *.sqlite3
+.ai_daily_brief/
 
-# Environment Variables & Secrets
+# Environment Variables & Profile Overrides (Environment-specific configs excluded from git)
 .env
-.env.local.toml
-*.local.toml
+.env.*
+*.env
+*.env.*
+configs/**/.env.*.toml
+!configs/**/.env.toml
+!configs/**/.env.test.toml
+!configs/**/.env.integration.toml
+
+# Secrets, Certificates & Credentials
 *.key
 *.pem
 *.p12
+*.pkcs12
+*.crt
+*.cer
+*.der
+*credentials*.json
+*service-account*.json
+*sa-key*.json
+*secret*.json
+*.id_token
+*.jwt
+*.secrets.toml
+secrets.toml
+secrets.yaml
+secrets.json
 
-# Explicitly allow configuration files in configs/
-!configs/**
-!configs/**/.*.toml
+# Test & Coverage Artifacts
+coverage.out
+coverage.html
 
 # Local Go Binaries
 bin/
@@ -39,6 +75,26 @@ dist-bin/
 /ai-daily-brief
 /ai-daily-brief.exe
 
+# Terraform State, Variables & Local Artifacts
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+*.tfvars
+*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+!*.tfvars.example
+!**/*.tfvars.example
+.terraformrc
+terraform.rc
+.terraform.lock.hcl
 
 # Editor & OS Artifacts
 .vscode/*
@@ -51,4 +107,3 @@ dist-bin/
 
 # Bazel Outputs
 bazel-*
-

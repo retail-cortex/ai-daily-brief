@@ -160,16 +160,27 @@ func TestMCP_ListArticles_A2UI(t *testing.T) {
 
 	resMap := resp.Result.(map[string]interface{})
 	contentBlocks := resMap["content"].([]MCPContentBlock)
-	if len(contentBlocks) == 0 {
-		t.Fatalf("Expected content blocks in result")
+	if len(contentBlocks) < 2 {
+		t.Fatalf("Expected at least 2 content blocks (text + a2ui resource)")
 	}
 
 	text := contentBlocks[0].Text
-	if !strings.Contains(text, "Gemini 3.7") {
-		t.Errorf("Expected Gemini 3.7 article in A2UI card deck, got:\n%s", text)
+	if !strings.Contains(text, "retrieved 2 articles") {
+		t.Errorf("Expected retrieval text, got:\n%s", text)
 	}
-	if !strings.Contains(text, "[⚡ Load Article Context: item_gemini_37]") {
-		t.Errorf("Expected action button in A2UI card output, got:\n%s", text)
+
+	resBlock := contentBlocks[1]
+	if resBlock.Type != "resource" || resBlock.Resource == nil {
+		t.Fatalf("Expected second block to be resource block")
+	}
+	if resBlock.Resource.MIMEType != MIMETypeA2UIJSON {
+		t.Errorf("Expected MIMEType %s, got %s", MIMETypeA2UIJSON, resBlock.Resource.MIMEType)
+	}
+	if !strings.Contains(resBlock.Resource.Text, "createSurface") || !strings.Contains(resBlock.Resource.Text, "updateComponents") {
+		t.Errorf("Expected A2UI v1.0 instructions in resource text, got:\n%s", resBlock.Resource.Text)
+	}
+	if !strings.Contains(resBlock.Resource.Text, "Gemini 3.7") {
+		t.Errorf("Expected Gemini 3.7 in A2UI resource text, got:\n%s", resBlock.Resource.Text)
 	}
 }
 
@@ -196,13 +207,18 @@ func TestMCP_SystemStatus(t *testing.T) {
 
 	resMap := resp.Result.(map[string]interface{})
 	contentBlocks := resMap["content"].([]MCPContentBlock)
-	text := contentBlocks[0].Text
-
-	if !strings.Contains(text, "AI DAILY BRIEF MCP CONTROL PLANE") {
-		t.Errorf("Expected telemetry header, got:\n%s", text)
+	if len(contentBlocks) < 2 {
+		t.Fatalf("Expected at least 2 content blocks")
 	}
-	if !strings.Contains(text, "**Indexed Database Records:** 2 articles") {
-		t.Errorf("Expected 2 database records count, got:\n%s", text)
+
+	text := contentBlocks[0].Text
+	if !strings.Contains(text, "Control Plane: 2 articles indexed") {
+		t.Errorf("Expected telemetry count, got:\n%s", text)
+	}
+
+	resBlock := contentBlocks[1]
+	if resBlock.Resource == nil || resBlock.Resource.MIMEType != MIMETypeA2UIJSON {
+		t.Errorf("Expected A2UI resource for telemetry")
 	}
 }
 

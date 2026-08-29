@@ -199,6 +199,62 @@ func fetchGoogleNewsQuery(query, company string, category database.NewsCategory,
 
 // 1. Frontier Models
 func fetchFrontierModels() []database.NewsItem {
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var allItems []database.NewsItem
+	runDate := time.Now().Format("2006-01-02")
+
+	// A. Official AI Lab Feeds
+	labFeeds := []struct {
+		url     string
+		company string
+	}{
+		{"https://openai.com/news/rss.xml", "OpenAI"},
+		{"https://blog.google/innovation-and-ai/technology/ai/rss/", "Google"},
+		{"https://huggingface.co/blog/feed.xml", "Hugging Face"},
+	}
+
+	for _, lf := range labFeeds {
+		wg.Add(1)
+		go func(feedURL, comp string) {
+			defer wg.Done()
+			feed, err := rssFeedParser.ParseURL(feedURL)
+			if err != nil {
+				return
+			}
+			var items []database.NewsItem
+			for idx, item := range feed.Items {
+				if idx >= 4 {
+					break
+				}
+				if item.Title != "" && item.Link != "" {
+					pubDate := runDate
+					if item.PublishedParsed != nil {
+						pubDate = item.PublishedParsed.Format("2006-01-02")
+					}
+					cleanedTitle := cleanTitle(item.Title)
+					summary := resolveSummary(item.Description, cleanedTitle, comp, database.CategoryFrontierModels)
+					items = append(items, database.NewsItem{
+						ID:        makeID(strings.ToLower(comp), item.Link),
+						RunDate:   runDate,
+						PubDate:   pubDate,
+						Company:   comp,
+						Category:  database.CategoryFrontierModels,
+						Title:     cleanedTitle,
+						Summary:   summary,
+						Link:      strings.TrimSpace(item.Link),
+						RawSource: fmt.Sprintf("%s Official Feed", comp),
+						CreatedAt: time.Now(),
+					})
+				}
+			}
+			mu.Lock()
+			allItems = append(allItems, items...)
+			mu.Unlock()
+		}(lf.url, lf.company)
+	}
+
+	// B. Targeted News Queries
 	queries := []struct {
 		q       string
 		company string
@@ -210,15 +266,11 @@ func fetchFrontierModels() []database.NewsItem {
 		{`("Meta AI" OR "Llama 3" OR "Llama 4") model`, "Meta AI"},
 	}
 
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var allItems []database.NewsItem
-
 	for _, q := range queries {
 		wg.Add(1)
 		go func(qStr, comp string) {
 			defer wg.Done()
-			res := fetchGoogleNewsQuery(qStr, comp, database.CategoryFrontierModels, 6)
+			res := fetchGoogleNewsQuery(qStr, comp, database.CategoryFrontierModels, 4)
 			mu.Lock()
 			allItems = append(allItems, res...)
 			mu.Unlock()
@@ -235,7 +287,7 @@ func fetchGoogleCloudReleaseNotes() []database.NewsItem {
 	runDate := time.Now().Format("2006-01-02")
 
 	// A. Official GCP Release Notes Feed (docs.cloud.google.com/release-notes)
-	feedURL := "https://cloud.google.com/feeds/gcp-release-notes.xml"
+	feedURL := "https://docs.cloud.google.com/feeds/gcp-release-notes.xml"
 	feed, err := rssFeedParser.ParseURL(feedURL)
 	if err == nil {
 		for idx, it := range feed.Items {
@@ -247,59 +299,73 @@ func fetchGoogleCloudReleaseNotes() []database.NewsItem {
 				pubDate = it.PublishedParsed.Format("2006-01-02")
 			}
 
-			link := it.Link
-			if link == "" {
-				link = "https://docs.cloud.google.com/release-notes"
-			}
-
-			// Parse content to extract first substantive bullet or title
-			var highlightTitle string
-			var highlightSummary string
-
 			if it.Content != "" {
 				doc, err := goquery.NewDocumentFromReader(strings.NewReader(it.Content))
 				if err == nil {
-					pFirst := doc.Find("p").First().Text()
-					liFirst := doc.Find("li").First().Text()
-					if liFirst != "" && len(liFirst) > 20 {
-						highlightSummary = cleanSummary(liFirst, 240)
-					} else if pFirst != "" {
-						highlightSummary = cleanSummary(pFirst, 240)
-					}
+					doc.Find("h2.release-note-product-title").Each(func(i int, s *goquery.Selection) {
+						productName := strings.TrimSpace(s.Text())
+						if productName == "" {
+							return
+						}
 
-					hTag := doc.Find("h3, h4").First().Text()
-					if hTag != "" {
-						highlightTitle = fmt.Sprintf("Google Cloud Release: %s (%s)", hTag, it.Title)
-					}
+						var productSummary string
+						var productLink string
+						var featureTitle string
+
+						next := s.Next()
+						for next.Length() > 0 && !next.Is("h2") {
+							if next.Is("h3, h4") && featureTitle == "" {
+								featureTitle = strings.TrimSpace(next.Text())
+							}
+							if next.Is("p, li") && productSummary == "" {
+								txt := strings.TrimSpace(next.Text())
+								if len(txt) > 20 {
+									productSummary = cleanSummary(txt, 240)
+								}
+							}
+							if productLink == "" {
+								if aHref, exists := next.Find("a[href]").First().Attr("href"); exists && aHref != "" {
+									productLink = aHref
+								} else if aHref, exists := next.Attr("href"); exists && aHref != "" {
+									productLink = aHref
+								}
+							}
+							next = next.Next()
+						}
+
+						if productLink == "" {
+							productLink = fmt.Sprintf("https://docs.cloud.google.com/release-notes#%s_%s", strings.ReplaceAll(it.Title, " ", "_"), strings.ReplaceAll(productName, " ", "_"))
+						}
+						if featureTitle == "" {
+							featureTitle = "Release Announcement"
+						}
+						if productSummary == "" {
+							productSummary = fmt.Sprintf("Google Cloud update for %s covering new enterprise features, security updates, and performance improvements.", productName)
+						}
+
+						title := fmt.Sprintf("%s: %s (%s)", productName, featureTitle, it.Title)
+						items = append(items, database.NewsItem{
+							ID:        makeID("gcp", productLink+productName),
+							RunDate:   runDate,
+							PubDate:   pubDate,
+							Company:   "Google Cloud",
+							Category:  database.CategoryGoogleCloud,
+							Title:     title,
+							Summary:   productSummary,
+							Link:      productLink,
+							RawSource: "docs.cloud.google.com/release-notes",
+							CreatedAt: time.Now(),
+						})
+					})
 				}
 			}
-
-			if highlightTitle == "" {
-				highlightTitle = fmt.Sprintf("Google Cloud Platform Release Notes - %s", it.Title)
-			}
-			if highlightSummary == "" {
-				highlightSummary = "Official release notes from Google Cloud covering infrastructure updates, Vertex AI, security patches, and services."
-			}
-
-			items = append(items, database.NewsItem{
-				ID:        makeID("gcp-rel", link+it.Title),
-				RunDate:   runDate,
-				PubDate:   pubDate,
-				Company:   "Google Cloud",
-				Category:  database.CategoryGoogleCloud,
-				Title:     highlightTitle,
-				Summary:   highlightSummary,
-				Link:      link,
-				RawSource: "docs.cloud.google.com/release-notes",
-				CreatedAt: time.Now(),
-			})
 		}
 	} else {
 		log.Printf("[Crawler] Warning: GCP release notes feed error: %v", err)
 	}
 
 	// B. Google Cloud & Vertex AI News Search
-	gcpNews := fetchGoogleNewsQuery(`("Google Cloud" OR "Vertex AI" OR "Cloud TPU" OR "AI Hypercomputer") (release OR update OR announcement)`, "Google Cloud", database.CategoryGoogleCloud, 6)
+	gcpNews := fetchGoogleNewsQuery(`("Google Cloud" OR "Vertex AI" OR "Cloud TPU" OR "AI Hypercomputer") (release OR update OR announcement)`, "Google Cloud", database.CategoryGoogleCloud, 4)
 	items = append(items, gcpNews...)
 
 	return items
@@ -312,11 +378,11 @@ func fetchResearchPapers() []database.NewsItem {
 	var allItems []database.NewsItem
 	runDate := time.Now().Format("2006-01-02")
 
-	// A. arXiv API
+	// A. arXiv API (Expanded to 50 preprints)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		arxivURL := "https://export.arxiv.org/api/query?search_query=cat:cs.CL+OR+cat:cs.AI+OR+cat:cs.CV+OR+cat:cs.LG&sortBy=submittedDate&sortOrder=descending&max_results=12"
+		arxivURL := "https://export.arxiv.org/api/query?search_query=cat:cs.CL+OR+cat:cs.AI+OR+cat:cs.CV+OR+cat:cs.LG+OR+stat.ML+OR+cs.RO&sortBy=submittedDate&sortOrder=descending&max_results=50"
 		req, err := http.NewRequest("GET", arxivURL, nil)
 		if err != nil {
 			return
@@ -370,11 +436,11 @@ func fetchResearchPapers() []database.NewsItem {
 		mu.Unlock()
 	}()
 
-	// B. Hugging Face Daily Papers API
+	// B. Hugging Face Daily Papers API (Expanded to 30 papers)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		resp, err := httpClient.Get("https://huggingface.co/api/daily_papers?limit=10")
+		resp, err := httpClient.Get("https://huggingface.co/api/daily_papers?limit=30")
 		if err != nil {
 			return
 		}
@@ -433,7 +499,7 @@ func fetchResearchPapers() []database.NewsItem {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		res := fetchGoogleNewsQuery(`("research paper" OR "arXiv" OR "reasoning model" OR "scaling law" OR "benchmark") ("LLM" OR "multimodal" OR "diffusion") model`, "Research Lab", database.CategoryResearchPapers, 6)
+		res := fetchGoogleNewsQuery(`AI research paper reasoning foundation model benchmark`, "Research Lab", database.CategoryResearchPapers, 8)
 		mu.Lock()
 		allItems = append(allItems, res...)
 		mu.Unlock()
@@ -448,23 +514,77 @@ func fetchAIBusiness() []database.NewsItem {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var allItems []database.NewsItem
+	runDate := time.Now().Format("2006-01-02")
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		res := fetchGoogleNewsQuery(`("AI startup" OR "OpenAI" OR "Anthropic" OR "Nvidia" OR "Mistral" OR "xAI") ("funding" OR "valuation" OR "acquisition" OR "enterprise" OR "partnership" OR "revenue")`, "AI Business & Deals", database.CategoryBusinessInfra, 8)
-		mu.Lock()
-		allItems = append(allItems, res...)
-		mu.Unlock()
-	}()
+	// A. Direct Industry Feeds
+	businessFeeds := []struct {
+		url     string
+		company string
+	}{
+		{"https://techcrunch.com/category/artificial-intelligence/feed/", "TechCrunch AI"},
+		{"https://venturebeat.com/category/ai/feed/", "VentureBeat AI"},
+		{"https://siliconangle.com/category/ai/feed/", "SiliconANGLE AI"},
+	}
 
-	go func() {
-		defer wg.Done()
-		res := fetchGoogleNewsQuery(`("AI datacenter" OR "GPU cluster" OR "Blackwell" OR "TPU" OR "AWS Bedrock" OR "Azure AI")`, "AI Compute & Infra", database.CategoryBusinessInfra, 8)
-		mu.Lock()
-		allItems = append(allItems, res...)
-		mu.Unlock()
-	}()
+	for _, bf := range businessFeeds {
+		wg.Add(1)
+		go func(feedURL, comp string) {
+			defer wg.Done()
+			feed, err := rssFeedParser.ParseURL(feedURL)
+			if err != nil {
+				return
+			}
+			var items []database.NewsItem
+			for idx, item := range feed.Items {
+				if idx >= 6 {
+					break
+				}
+				if item.Title != "" && item.Link != "" {
+					pubDate := runDate
+					if item.PublishedParsed != nil {
+						pubDate = item.PublishedParsed.Format("2006-01-02")
+					}
+					cleanedTitle := cleanTitle(item.Title)
+					summary := resolveSummary(item.Description, cleanedTitle, comp, database.CategoryBusinessInfra)
+					items = append(items, database.NewsItem{
+						ID:        makeID(strings.ToLower(regexp.MustCompile(`[^a-zA-Z0-9]`).ReplaceAllString(comp, "")), item.Link),
+						RunDate:   runDate,
+						PubDate:   pubDate,
+						Company:   comp,
+						Category:  database.CategoryBusinessInfra,
+						Title:     cleanedTitle,
+						Summary:   summary,
+						Link:      strings.TrimSpace(item.Link),
+						RawSource: fmt.Sprintf("%s RSS", comp),
+						CreatedAt: time.Now(),
+					})
+				}
+			}
+			mu.Lock()
+			allItems = append(allItems, items...)
+			mu.Unlock()
+		}(bf.url, bf.company)
+	}
+
+	// B. Targeted News Queries
+	queries := []struct {
+		q       string
+		company string
+	}{
+		{`AI startup funding valuation acquisition`, "AI Business & Deals"},
+		{`AI datacenter GPU cluster Blackwell compute cloud`, "AI Compute & Infra"},
+	}
+
+	for _, q := range queries {
+		wg.Add(1)
+		go func(qStr, comp string) {
+			defer wg.Done()
+			res := fetchGoogleNewsQuery(qStr, comp, database.CategoryBusinessInfra, 6)
+			mu.Lock()
+			allItems = append(allItems, res...)
+			mu.Unlock()
+		}(q.q, q.company)
+	}
 
 	wg.Wait()
 	return allItems
@@ -475,23 +595,77 @@ func fetchOSSTooling() []database.NewsItem {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var allItems []database.NewsItem
+	runDate := time.Now().Format("2006-01-02")
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		res := fetchGoogleNewsQuery(`("DeepSeek" OR "Qwen" OR "Mistral" OR "open weights" OR "open source model") model`, "Open Weights", database.CategoryOSSTooling, 8)
-		mu.Lock()
-		allItems = append(allItems, res...)
-		mu.Unlock()
-	}()
+	// A. Direct Developer & OSS Feeds
+	ossFeeds := []struct {
+		url     string
+		company string
+	}{
+		{"https://simonwillison.net/atom/everything/", "Simon Willison"},
+		{"https://www.langchain.com/blog/rss", "LangChain"},
+		{"https://huggingface.co/blog/feed.xml", "Hugging Face"},
+	}
 
-	go func() {
-		defer wg.Done()
-		res := fetchGoogleNewsQuery(`("vLLM" OR "Ollama" OR "Unsloth" OR "llama.cpp" OR "Hugging Face" OR "fine-tuning" OR "agent framework")`, "Developer Tooling", database.CategoryOSSTooling, 8)
-		mu.Lock()
-		allItems = append(allItems, res...)
-		mu.Unlock()
-	}()
+	for _, of := range ossFeeds {
+		wg.Add(1)
+		go func(feedURL, comp string) {
+			defer wg.Done()
+			feed, err := rssFeedParser.ParseURL(feedURL)
+			if err != nil {
+				return
+			}
+			var items []database.NewsItem
+			for idx, item := range feed.Items {
+				if idx >= 6 {
+					break
+				}
+				if item.Title != "" && item.Link != "" {
+					pubDate := runDate
+					if item.PublishedParsed != nil {
+						pubDate = item.PublishedParsed.Format("2006-01-02")
+					}
+					cleanedTitle := cleanTitle(item.Title)
+					summary := resolveSummary(item.Description, cleanedTitle, comp, database.CategoryOSSTooling)
+					items = append(items, database.NewsItem{
+						ID:        makeID(strings.ToLower(regexp.MustCompile(`[^a-zA-Z0-9]`).ReplaceAllString(comp, "")), item.Link),
+						RunDate:   runDate,
+						PubDate:   pubDate,
+						Company:   comp,
+						Category:  database.CategoryOSSTooling,
+						Title:     cleanedTitle,
+						Summary:   summary,
+						Link:      strings.TrimSpace(item.Link),
+						RawSource: fmt.Sprintf("%s RSS", comp),
+						CreatedAt: time.Now(),
+					})
+				}
+			}
+			mu.Lock()
+			allItems = append(allItems, items...)
+			mu.Unlock()
+		}(of.url, of.company)
+	}
+
+	// B. Targeted News Queries
+	queries := []struct {
+		q       string
+		company string
+	}{
+		{`DeepSeek Qwen Mistral open weights model release`, "Open Weights"},
+		{`vLLM Ollama Unsloth llama.cpp fine-tuning agent framework`, "Developer Tooling"},
+	}
+
+	for _, q := range queries {
+		wg.Add(1)
+		go func(qStr, comp string) {
+			defer wg.Done()
+			res := fetchGoogleNewsQuery(qStr, comp, database.CategoryOSSTooling, 6)
+			mu.Lock()
+			allItems = append(allItems, res...)
+			mu.Unlock()
+		}(q.q, q.company)
+	}
 
 	wg.Wait()
 	return allItems
@@ -538,17 +712,36 @@ func ExecuteBatchRun(db *gorm.DB) (*BatchResult, error) {
 	logs = append(logs, fmt.Sprintf("  ☁️ [Google Cloud] Fetched %d release notes & updates", len(gcp)))
 	logs = append(logs, fmt.Sprintf("  🟣 [AI Research Papers] Fetched %d items", len(papers)))
 	logs = append(logs, fmt.Sprintf("  🟢 [AI Business & Infra] Fetched %d items", len(business)))
-	logs = append(logs, fmt.Sprintf("  🟠 [OSS & Tooling] Fetched %d items", len(oss)))
+	logs = append(logs, fmt.Sprintf("  🟡 [OSS & Tooling] Fetched %d items", len(oss)))
 
 	allItems := append(frontier, append(gcp, append(papers, append(business, oss...)...)...)...)
 	logs = append(logs, fmt.Sprintf("Total records fetched in %s: %d", elapsed.Round(time.Millisecond), len(allItems)))
 
-	// Deduplication against SQLite database
-	var existingItems []database.NewsItem
-	db.Find(&existingItems)
-	existingMap := make(map[string]database.NewsItem)
-	for _, item := range existingItems {
-		existingMap[strings.ToLower(strings.TrimSpace(item.Link))] = item
+	// Targeted chunked deduplication against database to avoid unbounded memory load
+	linkSet := make(map[string]struct{})
+	var uniqueLinks []string
+	for _, item := range allItems {
+		cLink := strings.ToLower(strings.TrimSpace(item.Link))
+		if cLink != "" {
+			if _, seen := linkSet[cLink]; !seen {
+				linkSet[cLink] = struct{}{}
+				uniqueLinks = append(uniqueLinks, cLink)
+			}
+		}
+	}
+
+	existingMap := make(map[string]struct{})
+	chunkSize := 500
+	for i := 0; i < len(uniqueLinks); i += chunkSize {
+		end := i + chunkSize
+		if end > len(uniqueLinks) {
+			end = len(uniqueLinks)
+		}
+		var foundLinks []string
+		db.Model(&database.NewsItem{}).Where("LOWER(TRIM(link)) IN ?", uniqueLinks[i:end]).Pluck("LOWER(TRIM(link))", &foundLinks)
+		for _, fl := range foundLinks {
+			existingMap[fl] = struct{}{}
+		}
 	}
 
 	newInserted := 0
@@ -561,7 +754,7 @@ func ExecuteBatchRun(db *gorm.DB) (*BatchResult, error) {
 				skippedDuplicates++
 			} else {
 				if err := tx.Create(&item).Error; err == nil {
-					existingMap[cLink] = item
+					existingMap[cLink] = struct{}{}
 					newInserted++
 				} else {
 					skippedDuplicates++
