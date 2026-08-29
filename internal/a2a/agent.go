@@ -25,23 +25,53 @@ import (
 
 	"ai-daily-brief/internal/config"
 	"ai-daily-brief/internal/mcp"
+
+	"gorm.io/gorm"
 )
 
-// Agent coordinates Agent-to-Agent intelligence workflows consuming MCP
+// Agent coordinates Agent-to-Agent intelligence workflows backed by ToolExecutor (direct in-process or remote MCP)
 type Agent struct {
-	Config    *config.AgentConfig
-	MCPClient *MCPClient
+	Config   *config.AgentConfig
+	Executor ToolExecutor
 }
 
+// NewAgent creates an agent using configured MCP server URL (remote fallback)
 func NewAgent(cfg *config.AgentConfig) *Agent {
 	if cfg == nil {
 		cfg = config.LoadAgentConfig()
 	}
 	mcpCfg := cfg.GetMCPServer("daily_brief")
 	return &Agent{
-		Config:    cfg,
-		MCPClient: NewMCPClient(mcpCfg.URL, mcpCfg.TimeoutSeconds),
+		Config:   cfg,
+		Executor: NewMCPClient(mcpCfg.URL, mcpCfg.TimeoutSeconds),
 	}
+}
+
+// NewInProcessAgent creates an agent that executes tools directly in-memory with zero network overhead
+func NewInProcessAgent(cfg *config.AgentConfig, db *gorm.DB) *Agent {
+	if cfg == nil {
+		cfg = config.LoadAgentConfig()
+	}
+	return &Agent{
+		Config:   cfg,
+		Executor: NewInProcessToolExecutor(db),
+	}
+}
+
+// NewAgentWithExecutor creates an agent with an explicit ToolExecutor
+func NewAgentWithExecutor(cfg *config.AgentConfig, executor ToolExecutor) *Agent {
+	if cfg == nil {
+		cfg = config.LoadAgentConfig()
+	}
+	return &Agent{
+		Config:   cfg,
+		Executor: executor,
+	}
+}
+
+// GetExecutor returns the underlying ToolExecutor
+func (a *Agent) GetExecutor() ToolExecutor {
+	return a.Executor
 }
 
 // TaskResult encapsulates the execution outcome of an A2A agent invocation
@@ -57,7 +87,7 @@ type TaskResult struct {
 	Metadata         map[string]string      `json:"metadata,omitempty"`
 }
 
-func parseA2UIBlocks(blocks []MCPContentBlock) (string, map[string]interface{}, []interface{}) {
+func parseA2UIBlocks(blocks []mcp.MCPContentBlock) (string, map[string]interface{}, []interface{}) {
 	var outText strings.Builder
 	var payload map[string]interface{}
 	var instructions []interface{}
@@ -103,11 +133,16 @@ func parseA2UIBlocks(blocks []MCPContentBlock) (string, map[string]interface{}, 
 	return outText.String(), payload, instructions
 }
 
-// ExecuteTask runs an autonomous research task using the MCP control plane
+// ExecuteTask runs an autonomous research task using the ToolExecutor
 func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, error) {
 	startTime := time.Now()
 	geminiCfg := a.Config.GetGeminiConfig(a.Config.AgentName)
 	mcpCfg := a.Config.GetMCPServer("daily_brief")
+
+	execMode := "remote_mcp"
+	if _, ok := a.Executor.(*InProcessToolExecutor); ok {
+		execMode = "in_process_direct"
+	}
 
 	res := &TaskResult{
 		TaskName:   task,
@@ -115,11 +150,12 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 		ToolCalls:  []string{},
 		ExecutedAt: time.Now().UTC().Format(time.RFC3339),
 		Metadata: map[string]string{
-			"agent":     a.Config.AgentName,
-			"mcp_url":   mcpCfg.URL,
-			"gemini":    geminiCfg.Model,
-			"auth_mode": geminiCfg.AuthMode,
-			"region":    geminiCfg.Region,
+			"agent":          a.Config.AgentName,
+			"execution_mode": execMode,
+			"mcp_url":        mcpCfg.URL,
+			"gemini":         geminiCfg.Model,
+			"auth_mode":      geminiCfg.AuthMode,
+			"region":         geminiCfg.Region,
 		},
 	}
 
@@ -190,7 +226,7 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 			args["mode"] = "summary"
 		}
 
-		blocks, err := a.MCPClient.CallToolBlocks(ctx, "get_article_context", args)
+		blocks, err := a.Executor.CallToolBlocks(ctx, "get_article_context", args)
 		if err != nil {
 			log.Printf("[A2A Agent] GetArticleContext error: %v", err)
 			finalOutput.WriteString(fmt.Sprintf("Load article context error: %v", err))
@@ -231,7 +267,7 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 			tldrArgs["category"] = "OSS & Tooling"
 		}
 
-		blocks, err := a.MCPClient.CallToolBlocks(ctx, "generate_tldr", tldrArgs)
+		blocks, err := a.Executor.CallToolBlocks(ctx, "generate_tldr", tldrArgs)
 		if err != nil {
 			log.Printf("[A2A Agent] GenerateTLDR error: %v", err)
 			finalOutput.WriteString(fmt.Sprintf("TL;DR error: %v", err))
@@ -252,7 +288,7 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 	// 3. Crawl request check
 	if len(res.ToolCalls) == 0 && (strings.Contains(taskLower, "crawl") || strings.Contains(taskLower, "scrape") || strings.Contains(taskLower, "refresh")) {
 		res.ToolCalls = append(res.ToolCalls, "trigger_crawl")
-		blocks, err := a.MCPClient.CallToolBlocks(ctx, "trigger_crawl", nil)
+		blocks, err := a.Executor.CallToolBlocks(ctx, "trigger_crawl", nil)
 		if err != nil {
 			log.Printf("[A2A Agent] TriggerCrawl error: %v", err)
 			finalOutput.WriteString(fmt.Sprintf("Crawl error: %v", err))
@@ -273,7 +309,7 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 	// 4. Telemetry check
 	if len(res.ToolCalls) == 0 && (strings.Contains(taskLower, "telemetry") || strings.Contains(taskLower, "status") || strings.Contains(taskLower, "health") || strings.Contains(taskLower, "metric")) {
 		res.ToolCalls = append(res.ToolCalls, "get_telemetry")
-		blocks, err := a.MCPClient.CallToolBlocks(ctx, "get_telemetry", nil)
+		blocks, err := a.Executor.CallToolBlocks(ctx, "get_telemetry", nil)
 		if err != nil {
 			log.Printf("[A2A Agent] GetTelemetry error: %v", err)
 			finalOutput.WriteString(fmt.Sprintf("Telemetry error: %v", err))
@@ -294,7 +330,7 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 	// 5. Newsletter request
 	if len(res.ToolCalls) == 0 && strings.Contains(taskLower, "newsletter") {
 		res.ToolCalls = append(res.ToolCalls, "get_newsletter")
-		blocks, err := a.MCPClient.CallToolBlocks(ctx, "get_newsletter", nil)
+		blocks, err := a.Executor.CallToolBlocks(ctx, "get_newsletter", nil)
 		if err != nil {
 			log.Printf("[A2A Agent] GetNewsletter error: %v", err)
 			finalOutput.WriteString(fmt.Sprintf("Newsletter error: %v", err))
@@ -373,7 +409,7 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 		}
 		args["limit"] = 5
 
-		blocks, err := a.MCPClient.CallToolBlocks(ctx, "list_articles", args)
+		blocks, err := a.Executor.CallToolBlocks(ctx, "list_articles", args)
 		if err != nil {
 			log.Printf("[A2A Agent] ListArticles error: %v", err)
 			finalOutput.WriteString(fmt.Sprintf("List articles error: %v", err))
@@ -396,11 +432,11 @@ func (a *Agent) ExecuteTask(ctx context.Context, task string) (*TaskResult, erro
 	return res, nil
 }
 
-// Chat executes interactive conversational research against the MCP control plane
+// Chat executes interactive conversational research against the ToolExecutor
 func (a *Agent) Chat(ctx context.Context, sessionID, message, articleID string) (string, error) {
 	var groundPrefix string
 	if articleID != "" {
-		articleCtx, err := a.MCPClient.GetArticleContext(ctx, articleID, "")
+		articleCtx, err := a.Executor.GetArticleContext(ctx, articleID, "")
 		if err == nil && articleCtx != "" {
 			groundPrefix = fmt.Sprintf("Grounded in Article [%s]:\n%s\n\n", articleID, articleCtx)
 		}

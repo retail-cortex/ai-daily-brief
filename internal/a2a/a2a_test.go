@@ -60,7 +60,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func setupMockMCPServer(t *testing.T) (*httptest.Server, *mcp.Handler) {
+func setupMockMCPServer(t *testing.T) (*httptest.Server, *mcp.Handler, *gorm.DB) {
 	db := setupTestDB(t)
 	handler := mcp.NewHandler(db)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -74,11 +74,178 @@ func setupMockMCPServer(t *testing.T) (*httptest.Server, *mcp.Handler) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 	}))
-	return ts, handler
+	return ts, handler, db
 }
 
-func TestMCPClient_ListArticles(t *testing.T) {
-	ts, _ := setupMockMCPServer(t)
+// 1. Direct In-Process Tool Executor Tests (Zero Network Latency)
+func TestInProcessToolExecutor_DirectExecution(t *testing.T) {
+	db := setupTestDB(t)
+	executor := NewInProcessToolExecutor(db)
+	ctx := context.Background()
+
+	// A. list_articles
+	articlesOut, err := executor.ListArticles(ctx, "Frontier Models", "", "", 10)
+	if err != nil {
+		t.Fatalf("InProcess ListArticles failed: %v", err)
+	}
+	if !strings.Contains(articlesOut, "retrieved 1 articles") {
+		t.Errorf("Expected in-process response to contain article count, got: %s", articlesOut)
+	}
+
+	// B. get_system_status
+	statusOut, err := executor.GetSystemStatus(ctx)
+	if err != nil {
+		t.Fatalf("InProcess GetSystemStatus failed: %v", err)
+	}
+	if !strings.Contains(statusOut, "Control Plane:") {
+		t.Errorf("Expected status output, got: %s", statusOut)
+	}
+
+	// C. get_article_context
+	ctxOut, err := executor.GetArticleContext(ctx, "art_test_1", "")
+	if err != nil {
+		t.Fatalf("InProcess GetArticleContext failed: %v", err)
+	}
+	if !strings.Contains(ctxOut, "Google announces Gemini 3.7") {
+		t.Errorf("Expected article title in context, got: %s", ctxOut)
+	}
+
+	// D. get_newsletter
+	newsOut, err := executor.GetNewsletter(ctx)
+	if err != nil {
+		t.Fatalf("InProcess GetNewsletter failed: %v", err)
+	}
+	if !strings.Contains(newsOut, "Intelligence Digest") {
+		t.Errorf("Expected newsletter output, got: %s", newsOut)
+	}
+
+	// E. CallToolBlocks structured blocks
+	blocks, err := executor.CallToolBlocks(ctx, "list_articles", map[string]interface{}{"limit": 5})
+	if err != nil {
+		t.Fatalf("InProcess CallToolBlocks failed: %v", err)
+	}
+	if len(blocks) < 2 {
+		t.Fatalf("Expected at least 2 content blocks (text + a2ui resource), got %d", len(blocks))
+	}
+	if blocks[1].Resource == nil || blocks[1].Resource.MIMEType != mcp.MIMETypeA2UIJSON {
+		t.Errorf("Expected A2UI JSON resource block, got %+v", blocks[1])
+	}
+}
+
+// 2. Direct In-Process Agent Execution Tests
+func TestInProcessAgent_ExecuteTask(t *testing.T) {
+	db := setupTestDB(t)
+	cfg := &config.AgentConfig{
+		AgentName:      "in-process-agent",
+		TimeoutSeconds: 5,
+		Gemini: map[string]config.GeminiAgentConfig{
+			"default": {
+				Model:    "gemini-3.7-flash",
+				Region:   "global",
+				AuthMode: "vertex_adc",
+			},
+		},
+	}
+
+	agent := NewInProcessAgent(cfg, db)
+	ctx := context.Background()
+
+	// Verify metadata reflects in-process execution mode
+	res, err := agent.ExecuteTask(ctx, "list frontier models")
+	if err != nil {
+		t.Fatalf("ExecuteTask failed: %v", err)
+	}
+	if res.Status != "SUCCESS" {
+		t.Errorf("Expected status SUCCESS, got %s", res.Status)
+	}
+	if res.Metadata["execution_mode"] != "in_process_direct" {
+		t.Errorf("Expected execution_mode 'in_process_direct', got %s", res.Metadata["execution_mode"])
+	}
+	if len(res.ToolCalls) == 0 || res.ToolCalls[0] != "list_articles" {
+		t.Errorf("Expected tool call 'list_articles', got %+v", res.ToolCalls)
+	}
+	if len(res.A2UIPayload) == 0 && len(res.A2UIInstructions) == 0 {
+		t.Error("Expected A2UI payload or instructions to be populated")
+	}
+
+	// Verify orientation / greeting
+	greetingRes, err := agent.ExecuteTask(ctx, "hello")
+	if err != nil {
+		t.Fatalf("Greeting failed: %v", err)
+	}
+	if !strings.Contains(greetingRes.Output, "Welcome to AI Daily Brief") {
+		t.Errorf("Expected welcome output, got: %s", greetingRes.Output)
+	}
+}
+
+// 3. Direct In-Process Server HTTP Endpoints Tests
+func TestInProcessServer_HTTPRoutes(t *testing.T) {
+	db := setupTestDB(t)
+	cfg := &config.AgentConfig{
+		AgentName:      "in-process-a2a-server",
+		TimeoutSeconds: 5,
+	}
+
+	srv := NewInProcessServer(cfg, db)
+
+	// A. Health check verifying in_process_direct mode
+	req, _ := http.NewRequest(http.MethodGet, "/healthz", nil)
+	w := httptest.NewRecorder()
+	srv.Router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 OK from /healthz, got %d", w.Code)
+	}
+	var healthResp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &healthResp); err != nil {
+		t.Fatalf("Failed to parse health response: %v", err)
+	}
+	if healthResp["execution_mode"] != "in_process_direct" {
+		t.Errorf("Expected health execution_mode 'in_process_direct', got %v", healthResp["execution_mode"])
+	}
+
+	// B. Status check verifying in_process flag
+	req, _ = http.NewRequest(http.MethodGet, "/status", nil)
+	w = httptest.NewRecorder()
+	srv.Router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 OK from /status, got %d", w.Code)
+	}
+	var statusResp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &statusResp); err != nil {
+		t.Fatalf("Failed to parse status response: %v", err)
+	}
+	if statusResp["in_process"] != true {
+		t.Errorf("Expected status in_process == true, got %v", statusResp["in_process"])
+	}
+	if statusResp["execution_mode"] != "in_process_direct" {
+		t.Errorf("Expected status execution_mode 'in_process_direct', got %v", statusResp["execution_mode"])
+	}
+
+	// C. Agent Invoke via in-process dispatch
+	body := strings.NewReader(`{"jsonrpc": "2.0", "id": 1, "task": "list frontier models"}`)
+	req, _ = http.NewRequest(http.MethodPost, "/agent/invoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	srv.Router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 OK from /agent/invoke, got %d (body: %s)", w.Code, w.Body.String())
+	}
+	var jsonRes struct {
+		JSONRPC string      `json:"jsonrpc"`
+		ID      int         `json:"id"`
+		Result  *A2AMessage `json:"result"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&jsonRes); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+	if jsonRes.Result == nil || len(jsonRes.Result.Parts) == 0 {
+		t.Fatalf("Expected valid A2A message with parts")
+	}
+}
+
+// 4. Remote MCP Client Tests (External MCP Server Connectivity)
+func TestMCPClient_RemoteListArticles(t *testing.T) {
+	ts, _, _ := setupMockMCPServer(t)
 	defer ts.Close()
 
 	client := NewMCPClient(ts.URL, 5)
@@ -94,8 +261,8 @@ func TestMCPClient_ListArticles(t *testing.T) {
 	}
 }
 
-func TestMCPClient_GetSystemStatus(t *testing.T) {
-	ts, _ := setupMockMCPServer(t)
+func TestMCPClient_RemoteGetSystemStatus(t *testing.T) {
+	ts, _, _ := setupMockMCPServer(t)
 	defer ts.Close()
 
 	client := NewMCPClient(ts.URL, 5)
@@ -110,12 +277,29 @@ func TestMCPClient_GetSystemStatus(t *testing.T) {
 	}
 }
 
-func TestAgent_ExecuteTask(t *testing.T) {
-	ts, _ := setupMockMCPServer(t)
+func TestMCPClient_RemoteGetNewsletter(t *testing.T) {
+	ts, _, _ := setupMockMCPServer(t)
+	defer ts.Close()
+
+	client := NewMCPClient(ts.URL, 5)
+	ctx := context.Background()
+
+	newsOut, err := client.GetNewsletter(ctx)
+	if err != nil {
+		t.Fatalf("GetNewsletter failed: %v", err)
+	}
+	if !strings.Contains(newsOut, "Intelligence Digest") {
+		t.Errorf("Expected newsletter output, got: %s", newsOut)
+	}
+}
+
+// 5. Remote MCP Agent & Server Execution Tests
+func TestAgent_ExecuteTask_RemoteMCP(t *testing.T) {
+	ts, _, _ := setupMockMCPServer(t)
 	defer ts.Close()
 
 	cfg := &config.AgentConfig{
-		AgentName:      "test-agent",
+		AgentName:      "remote-mcp-agent",
 		MCPServerURL:   ts.URL,
 		TimeoutSeconds: 5,
 		Gemini: map[string]config.GeminiAgentConfig{
@@ -130,7 +314,7 @@ func TestAgent_ExecuteTask(t *testing.T) {
 	agent := NewAgent(cfg)
 	ctx := context.Background()
 
-	// Execute search task
+	// Execute search task via remote MCP
 	res, err := agent.ExecuteTask(ctx, "search frontier models from Google")
 	if err != nil {
 		t.Fatalf("ExecuteTask failed: %v", err)
@@ -138,16 +322,19 @@ func TestAgent_ExecuteTask(t *testing.T) {
 	if res.Status != "SUCCESS" {
 		t.Errorf("Expected status SUCCESS, got %s", res.Status)
 	}
+	if res.Metadata["execution_mode"] != "remote_mcp" {
+		t.Errorf("Expected execution_mode 'remote_mcp', got %s", res.Metadata["execution_mode"])
+	}
 	if len(res.ToolCalls) == 0 {
 		t.Error("Expected tool calls to be recorded")
 	}
-	if len(res.A2UIPayload) == 0 {
-		t.Error("Expected A2UI payload to be populated")
+	if len(res.A2UIPayload) == 0 && len(res.A2UIInstructions) == 0 {
+		t.Error("Expected A2UI payload or instructions to be populated")
 	}
 }
 
-func TestServer_HTTPRoutes(t *testing.T) {
-	ts, _ := setupMockMCPServer(t)
+func TestServer_HTTPRoutes_RemoteMCP(t *testing.T) {
+	ts, _, _ := setupMockMCPServer(t)
 	defer ts.Close()
 
 	cfg := &config.AgentConfig{

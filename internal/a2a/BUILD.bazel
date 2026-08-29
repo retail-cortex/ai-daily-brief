@@ -19,6 +19,7 @@ go_library(
     srcs = [
         "agent.go",
         "client.go",
+        "executor.go",
         "protocol.go",
         "server.go",
     ],
@@ -29,6 +30,7 @@ go_library(
         "//internal/mcp",
         "@com_github_gin_gonic_gin//:gin",
         "@com_google_cloud_go_compute_metadata//:metadata",
+        "@io_gorm_gorm//:gorm",
     ],
 )
 

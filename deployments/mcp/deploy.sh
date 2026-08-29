@@ -35,6 +35,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --min-instances=0 \
   --max-instances=10 \
   --service-account="ai-daily-brief-sa-${ENVIRONMENT}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},MODENV_PROFILE=${ENVIRONMENT}"
+  --update-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},MODENV_PROFILE=${ENVIRONMENT}" \
+  --set-secrets="ALLOYDB_DATABASE_URL=ai-daily-brief-db-url-${ENVIRONMENT}:latest"
 
 echo "✅ Deployment completed successfully!"

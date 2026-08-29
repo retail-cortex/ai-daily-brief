@@ -5,19 +5,28 @@ weight: 4
 
 # 🤖 Agent-to-Agent (A2A) Service & Agent Card
 
-The **A2A Agent** (`cmd/a2a-agent`) is an autonomous AI agent service deployable to **Google Cloud Run** that consumes the **AI Daily Brief MCP Server** as its intelligent control plane.
+The **A2A Agent** (`cmd/a2a-agent`) is an autonomous AI agent service deployable to **Google Cloud Run** that executes intelligence workflows via the `ToolExecutor` engine, supporting both **Direct In-Process Tool Execution** (zero network latency) and **Remote MCP Control Plane** invocation.
 
 ---
 
 ## 🎯 Architecture
 
 ```mermaid
-flowchart LR
-    Caller["External Agent / Gemini Enterprise / Discovery Engine"] -->|"POST /agent/invoke or /run"| A2A["A2A Agent Service (:8080)"]
+flowchart TD
+    Caller["External Agent / Gemini Enterprise / Discovery Engine"] -->|"POST /agent/invoke or /run"| A2A["A2A Agent Service (:8081)"]
     Caller -->|"GET /.well-known/agent-card.json"| Card["A2A Protocol Card"]
-    A2A -->|"JSON-RPC /mcp (OIDC Bearer Auth)"| MCP["MCP Server Control Plane (:8080)"]
-    MCP -->|"PostgreSQL / AlloyDB"| DB[("AlloyDB Cluster")]
-    MCP -->|"ADC"| Gemini["Vertex AI Gemini 3.7 Flash"]
+    
+    subgraph A2A_Engine ["A2A Agent Tool Execution Engine"]
+        A2A -->|"ToolExecutor"| Exec{"Execution Mode"}
+        Exec -->|"Direct In-Process"| InProc["InProcessToolExecutor (0ms Network)"]
+        Exec -->|"Remote Fallback"| Remote["MCPClient (JSON-RPC /mcp)"]
+    end
+
+    InProc -->|"Direct GORM"| DB[("AlloyDB Cluster")]
+    Remote -->|"OIDC Bearer Auth"| MCP["MCP Server (:8080)"]
+    MCP -->|"PostgreSQL / AlloyDB"| DB
+    InProc -->|"ADC"| Gemini["Vertex AI Gemini 3.7 Flash"]
+    MCP -->|"ADC"| Gemini
 ```
 
 ---

@@ -39,6 +39,6 @@ gcloud run deploy "${SERVICE_NAME}" \
   --min-instances=0 \
   --max-instances=5 \
   --service-account="ai-daily-brief-agent-sa-${ENVIRONMENT}@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},MODENV_PROFILE=${ENVIRONMENT},MCP_SERVER_URL=${MCP_URL}"
+  --update-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT_ID},MODENV_PROFILE=${ENVIRONMENT},MCP_SERVER_URL=${MCP_URL}"
 
 echo "✅ A2A Agent deployment completed successfully!"

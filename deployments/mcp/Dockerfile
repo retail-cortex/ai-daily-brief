@@ -25,10 +25,9 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/mcp-server /app/mcp-server
 
 # Copy base and environment configurations (excluding developer local overrides)
-COPY configs/mcp/.env.toml /app/configs/mcp/.env.toml
-COPY configs/mcp/.env.dev.toml /app/configs/mcp/.env.dev.toml
-COPY configs/mcp/.env.prod.toml /app/configs/mcp/.env.prod.toml
-COPY configs/mcp/.env.integration.toml /app/configs/mcp/.env.integration.toml
+COPY configs/mcp/example-dev.toml /app/configs/mcp/.env.dev.toml
+COPY configs/mcp/example-prod.toml /app/configs/mcp/.env.prod.toml
+COPY configs/mcp/example-integration.toml /app/configs/mcp/.env.integration.toml
 
 ENV PORT=8080
 ENV MODENV_PREFIX=/app/configs/mcp

@@ -26,6 +26,7 @@ import (
 	"ai-daily-brief/internal/config"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Server struct {
@@ -43,7 +44,18 @@ type ChatRequest struct {
 	ArticleID string `json:"article_id,omitempty"`
 }
 
+// NewServer initializes an A2A Server using the default configured MCPClient
 func NewServer(cfg *config.AgentConfig) *Server {
+	return NewServerWithExecutor(cfg, nil)
+}
+
+// NewInProcessServer initializes an A2A Server with direct in-process database tool execution
+func NewInProcessServer(cfg *config.AgentConfig, db *gorm.DB) *Server {
+	return NewServerWithExecutor(cfg, NewInProcessToolExecutor(db))
+}
+
+// NewServerWithExecutor initializes an A2A Server with an explicit ToolExecutor
+func NewServerWithExecutor(cfg *config.AgentConfig, executor ToolExecutor) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -59,8 +71,15 @@ func NewServer(cfg *config.AgentConfig) *Server {
 		}
 	})
 
+	var agent *Agent
+	if executor != nil {
+		agent = NewAgentWithExecutor(cfg, executor)
+	} else {
+		agent = NewAgent(cfg)
+	}
+
 	s := &Server{
-		Agent:  NewAgent(cfg),
+		Agent:  agent,
 		Router: r,
 	}
 
@@ -168,7 +187,7 @@ func (s *Server) buildAgentCard(baseURL string) AgentCard {
 
 	return AgentCard{
 		Name:               s.Agent.Config.AgentName,
-		Description:        "Autonomous AI intelligence agent providing deep research, structured synthesis, executive TL;DR briefings, and live grounding across frontier AI models, academic research papers, open-source tooling, and Google Cloud infrastructure releases backed by the AI Daily Brief MCP control plane.",
+		Description:        "Autonomous AI intelligence agent providing deep research, structured synthesis, executive TL;DR briefings, and live grounding across frontier AI models, academic research papers, open-source tooling, and Google Cloud infrastructure releases backed by the AI Daily Brief intelligence engine.",
 		Version:            "1.0.0",
 		ProtocolVersion:    "1.0.0",
 		URL:                baseURL,
@@ -187,11 +206,16 @@ func (s *Server) setupRoutes() {
 	// 1. Cloud Run Readiness/Liveness Probe
 	s.Router.GET("/healthz", func(c *gin.Context) {
 		mcpCfg := s.Agent.Config.GetMCPServer("daily_brief")
+		execMode := "remote_mcp"
+		if _, ok := s.Agent.Executor.(*InProcessToolExecutor); ok {
+			execMode = "in_process_direct"
+		}
 		c.JSON(http.StatusOK, gin.H{
-			"status":    "healthy",
-			"service":   s.Agent.Config.AgentName,
-			"mcp_url":   mcpCfg.URL,
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"status":         "healthy",
+			"service":        s.Agent.Config.AgentName,
+			"execution_mode": execMode,
+			"mcp_url":        mcpCfg.URL,
+			"timestamp":      time.Now().UTC().Format(time.RFC3339),
 		})
 	})
 
@@ -284,12 +308,23 @@ func (s *Server) setupRoutes() {
 
 	// 4. Status inspection
 	s.Router.GET("/status", func(c *gin.Context) {
-		mcpStatus, err := s.Agent.MCPClient.GetSystemStatus(c.Request.Context())
+		mcpStatus, err := s.Agent.Executor.GetSystemStatus(c.Request.Context())
 		mcpAvailable := (err == nil)
 		geminiCfg := s.Agent.Config.GetGeminiConfig(s.Agent.Config.AgentName)
 		mcpCfg := s.Agent.Config.GetMCPServer("daily_brief")
+		isDirect := false
+		if _, ok := s.Agent.Executor.(*InProcessToolExecutor); ok {
+			isDirect = true
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"agent":          s.Agent.Config.AgentName,
+			"execution_mode": func() string {
+				if isDirect {
+					return "in_process_direct"
+				}
+				return "remote_mcp"
+			}(),
+			"in_process":     isDirect,
 			"mcp_server":     mcpCfg.URL,
 			"mcp_connected":  mcpAvailable,
 			"mcp_status":     mcpStatus,
@@ -348,8 +383,14 @@ func (s *Server) Run(ctx context.Context, port string) error {
 	return srv.ListenAndServe()
 }
 
-// RunHTTPServer initializes and runs the A2A HTTP Server
+// RunHTTPServer initializes and runs the A2A HTTP Server with default remote MCP execution
 func RunHTTPServer(cfg *config.AgentConfig, port string) error {
 	srv := NewServer(cfg)
+	return srv.Run(context.Background(), port)
+}
+
+// RunInProcessHTTPServer initializes and runs the A2A HTTP Server with direct in-process database tool execution
+func RunInProcessHTTPServer(cfg *config.AgentConfig, db *gorm.DB, port string) error {
+	srv := NewInProcessServer(cfg, db)
 	return srv.Run(context.Background(), port)
 }

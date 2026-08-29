@@ -25,8 +25,16 @@ import (
 	"strings"
 	"time"
 
+	"ai-daily-brief/internal/mcp"
+
 	"cloud.google.com/go/compute/metadata"
 )
+
+// MCPContentBlock aliases mcp.MCPContentBlock for compatibility
+type MCPContentBlock = mcp.MCPContentBlock
+
+// MCPResourceContent aliases mcp.MCPResourceContent for compatibility
+type MCPResourceContent = mcp.MCPResourceContent
 
 // MCPClient connects to and invokes tools on the AI Daily Brief MCP Server
 type MCPClient struct {
@@ -67,22 +75,8 @@ func (c *MCPClient) getIdTokenForAudience(audience string) string {
 	return ""
 }
 
-// MCPContentBlock represents a typed item in an MCP response
-type MCPContentBlock struct {
-	Type     string                  `json:"type"`
-	Text     string                  `json:"text,omitempty"`
-	Resource *MCPResourceContent     `json:"resource,omitempty"`
-}
-
-type MCPResourceContent struct {
-	URI      string `json:"uri"`
-	MIMEType string `json:"mimeType"`
-	Text     string `json:"text,omitempty"`
-	Blob     string `json:"blob,omitempty"`
-}
-
 // CallToolBlocks executes a tool on the MCP server and returns the raw structured content blocks
-func (c *MCPClient) CallToolBlocks(ctx context.Context, toolName string, arguments map[string]interface{}) ([]MCPContentBlock, error) {
+func (c *MCPClient) CallToolBlocks(ctx context.Context, toolName string, arguments map[string]interface{}) ([]mcp.MCPContentBlock, error) {
 	if arguments == nil {
 		arguments = make(map[string]interface{})
 	}
@@ -130,8 +124,8 @@ func (c *MCPClient) CallToolBlocks(ctx context.Context, toolName string, argumen
 	var rpcResp struct {
 		JSONRPC string `json:"jsonrpc"`
 		Result  struct {
-			Content []MCPContentBlock `json:"content"`
-			IsError bool              `json:"isError"`
+			Content []mcp.MCPContentBlock `json:"content"`
+			IsError bool                  `json:"isError"`
 		} `json:"result"`
 		Error *struct {
 			Code    int    `json:"code"`
@@ -204,6 +198,11 @@ func (c *MCPClient) GenerateTLDR(ctx context.Context) (string, error) {
 // TriggerCrawl triggers immediate crawl run
 func (c *MCPClient) TriggerCrawl(ctx context.Context) (string, error) {
 	return c.CallTool(ctx, "trigger_crawl", nil)
+}
+
+// GetNewsletter compiles newsletter representation
+func (c *MCPClient) GetNewsletter(ctx context.Context) (string, error) {
+	return c.CallTool(ctx, "get_newsletter", nil)
 }
 
 // GetSystemStatus queries system status

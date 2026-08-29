@@ -23,6 +23,7 @@ go_library(
     deps = [
         "//internal/a2a",
         "//internal/config",
+        "//internal/database",
     ],
 )
 
