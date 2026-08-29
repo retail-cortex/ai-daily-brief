@@ -31,14 +31,15 @@ For detailed architecture guides, MCP tool specifications, Cloud Run deployment 
 ## 🚀 Quick Start (Running via Bazel)
 
 ```bash
-# 1. Run the unified MCP Server (Port 8080)
-bazel run //:run
+# 1. Run all 4 services concurrently in parallel (Dev Profile)
+# (Starts Hugo Docs on :1313, Test App on :8888, MCP Server on :8080, A2A Agent on :8081)
+bazel run //:dev
 
-# 2. Run the autonomous A2A Agent (Port 8081)
-bazel run //:run-agent
-
-# 3. Serve the live Hugo documentation website (Port 1313)
-bazel run //:serve-docs
+# Or run individual services:
+bazel run //:run           # MCP & REST Server (Port 8080)
+bazel run //:run-agent     # A2A Agent (Port 8081)
+bazel run //:run-test-app  # A2A Diagnostic Test App (Port 8888)
+bazel run //:serve-docs    # Hugo Documentation Site (Port 1313)
 ```
 
 ---

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@gazelle//:def.bzl", "gazelle")
+load("@rules_multirun//:defs.bzl", "command", "multirun")
 
 # gazelle:prefix ai-daily-brief
 gazelle(name = "gazelle")
@@ -67,6 +68,19 @@ alias(
     visibility = ["//visibility:public"],
 )
 
+# A2A Interactive Diagnostic Test App
+alias(
+    name = "test-app",
+    actual = "//apps/a2a-test-app:a2a-test-app",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "run-test-app",
+    actual = "//apps/a2a-test-app:a2a-test-app",
+    visibility = ["//visibility:public"],
+)
+
 # Configuration & secret encryption tool alias
 alias(
     name = "modenv",
@@ -84,5 +98,66 @@ alias(
 alias(
     name = "serve-docs",
     actual = "//docs:serve",
+    visibility = ["//visibility:public"],
+)
+
+# -----------------------------------------------------------------------------
+# Development Environment Multirun Commands
+# -----------------------------------------------------------------------------
+
+command(
+    name = "cmd-mcp-server-dev",
+    command = "//cmd/mcp-server",
+    description = "Starting MCP Server & REST Control Plane (:8080) [dev profile]",
+    environment = {
+        "MODENV_PROFILE": "dev",
+    },
+    run_from_workspace_root = True,
+)
+
+command(
+    name = "cmd-a2a-agent-dev",
+    command = "//cmd/a2a-agent",
+    description = "Starting A2A Agent (:8081) [dev profile]",
+    environment = {
+        "MODENV_PROFILE": "dev",
+    },
+    run_from_workspace_root = True,
+)
+
+command(
+    name = "cmd-docs-serve",
+    command = "//docs:serve",
+    description = "Starting Hugo Documentation Server (:1313)",
+)
+
+command(
+    name = "cmd-test-app",
+    command = "//apps/a2a-test-app:a2a-test-app",
+    description = "Starting A2A Diagnostic Web Test Harness (:8888)",
+)
+
+# Unified parallel multi-runner for local dev environment
+multirun(
+    name = "dev",
+    commands = [
+        ":cmd-docs-serve",
+        ":cmd-test-app",
+        ":cmd-mcp-server-dev",
+        ":cmd-a2a-agent-dev",
+    ],
+    jobs = 0,
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "multirun",
+    actual = ":dev",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "run-dev",
+    actual = ":dev",
     visibility = ["//visibility:public"],
 )

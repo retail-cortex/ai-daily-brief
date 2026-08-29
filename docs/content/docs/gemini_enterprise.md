@@ -1,6 +1,6 @@
 ---
 title: "Gemini Enterprise Integration"
-weight: 7
+weight: 5
 ---
 
 # 🌐 Google Gemini Enterprise Integration Guide

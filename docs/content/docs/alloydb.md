@@ -1,6 +1,6 @@
 ---
 title: "Google Cloud AlloyDB"
-weight: 5
+weight: 7
 ---
 
 # 💾 Google Cloud AlloyDB for PostgreSQL

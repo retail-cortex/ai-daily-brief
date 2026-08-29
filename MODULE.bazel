@@ -64,3 +64,4 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 
 hugo_deps = use_extension("@rules_hugo//hugo:extensions.bzl", "hugo_deps")
 use_repo(hugo_deps, "hugo", "hugo_theme_book")
+bazel_dep(name = "rules_multirun", version = "0.11.0")

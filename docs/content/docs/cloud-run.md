@@ -1,6 +1,6 @@
 ---
 title: "Cloud Run Deployment"
-weight: 4
+weight: 6
 ---
 
 # ☁️ Google Cloud Run Deployment

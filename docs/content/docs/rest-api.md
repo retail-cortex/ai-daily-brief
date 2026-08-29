@@ -1,6 +1,6 @@
 ---
 title: "REST API Reference"
-weight: 6
+weight: 8
 ---
 
 # 📡 REST API Reference

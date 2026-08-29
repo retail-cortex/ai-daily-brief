@@ -1,6 +1,6 @@
 ---
 title: "A2A Agent & MCP Integration"
-weight: 7
+weight: 4
 ---
 
 # 🤖 Agent-to-Agent (A2A) Service & Agent Card
