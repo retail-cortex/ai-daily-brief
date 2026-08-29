@@ -1,0 +1,24 @@
+[project]
+name = "a2a-test-app"
+version = "0.1.0"
+description = "Interactive Web Test Harness for AI Daily Brief A2A Agent & MCP Server"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "httpx>=0.28.0",
+    "google-auth>=2.36.0",
+    "jinja2>=3.1.4",
+    "pydantic>=2.10.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.3.0",
+    "ruff>=0.8.0",
+]

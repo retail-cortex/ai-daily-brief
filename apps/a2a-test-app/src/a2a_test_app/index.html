@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2A Agent & MCP Diagnostics Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .markdown-body h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; color: #38bdf8; }
+        .markdown-body h2 { font-size: 1.2rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.4rem; color: #7dd3fc; }
+        .markdown-body h3 { font-size: 1.05rem; font-weight: 600; margin-top: 0.8rem; margin-bottom: 0.3rem; color: #bae6fd; }
+        .markdown-body p { margin-bottom: 0.6rem; line-height: 1.5; }
+        .markdown-body ul { list-style-type: disc; margin-left: 1.25rem; margin-bottom: 0.6rem; }
+        .markdown-body li { margin-bottom: 0.25rem; }
+        .markdown-body blockquote { border-left: 3px solid #38bdf8; padding-left: 0.75rem; color: #94a3b8; margin: 0.5rem 0; font-style: italic; }
+        .markdown-body a { color: #60a5fa; text-decoration: underline; }
+        .markdown-body code { background-color: #1e293b; padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-size: 0.85em; color: #f472b6; }
+        .markdown-body pre { background-color: #1e293b; padding: 0.75rem; border-radius: 0.375rem; overflow-x: auto; margin: 0.5rem 0; font-size: 0.85em; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    AI Daily Brief <span class="text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded-full font-mono">A2A 0.8 / A2UI v1.0</span>
+                </h1>
+                <p class="text-xs text-slate-400">Gemini Enterprise Integration & Canonical A2UI Component Validator</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button onclick="checkAgentHealth()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition">
+                <i class="fa-solid fa-heart-pulse text-emerald-400"></i> Health Check
+            </button>
+            <span id="health-badge" class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Run Active
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left Column: Controls & Quick Triggers -->
+        <div class="lg:col-span-4 space-y-6">
+            <!-- Configuration Box -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-sky-400"></i> Service Endpoints
+                </h2>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">A2A Agent Target</label>
+                    <input id="agent-url" type="text" value="http://localhost:8081" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 font-mono">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">MCP Server Target</label>
+                    <input id="mcp-url" type="text" value="http://localhost:8080" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 font-mono">
+                </div>
+            </div>
+
+            <!-- Quick Action Palette -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-amber-400"></i> Quick Invocations
+                </h2>
+                <div class="grid grid-cols-1 gap-2">
+                    <button onclick="sendPrompt('hi')" class="text-left text-xs bg-slate-800/80 hover:bg-slate-800 hover:border-slate-700 border border-slate-800 p-2.5 rounded-lg transition flex items-center justify-between">
+                        <div>
+                            <span class="font-medium text-slate-200">👋 Welcome & Hub</span>
+                            <p class="text-[11px] text-slate-400">Test 'hi' orientation & quick cards</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                    </button>
+                    <button onclick="sendPrompt('Generate today\'s executive intelligence summary')" class="text-left text-xs bg-slate-800/80 hover:bg-slate-800 hover:border-slate-700 border border-slate-800 p-2.5 rounded-lg transition flex items-center justify-between">
+                        <div>
+                            <span class="font-medium text-slate-200">⚡ Strategic TL;DR Briefing</span>
+                            <p class="text-[11px] text-slate-400">Executive summary card with Voice Action</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                    </button>
+                    <button onclick="sendPrompt('list research papers')" class="text-left text-xs bg-slate-800/80 hover:bg-slate-800 hover:border-slate-700 border border-slate-800 p-2.5 rounded-lg transition flex items-center justify-between">
+                        <div>
+                            <span class="font-medium text-slate-200">🔬 AI Research Papers</span>
+                            <p class="text-[11px] text-slate-400">Browse arXiv & HuggingFace A2UI cards</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                    </button>
+                    <button onclick="sendPrompt('Trigger a live intelligence crawl')" class="text-left text-xs bg-slate-800/80 hover:bg-slate-800 hover:border-slate-700 border border-slate-800 p-2.5 rounded-lg transition flex items-center justify-between">
+                        <div>
+                            <span class="font-medium text-slate-200">🔄 Ingest Live Crawl Batch</span>
+                            <p class="text-[11px] text-slate-400">Trigger multi-stream ingestion to AlloyDB</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                    </button>
+                    <button onclick="sendPrompt('What is the control plane telemetry status?')" class="text-left text-xs bg-slate-800/80 hover:bg-slate-800 hover:border-slate-700 border border-slate-800 p-2.5 rounded-lg transition flex items-center justify-between">
+                        <div>
+                            <span class="font-medium text-slate-200">📊 Control Plane Status</span>
+                            <p class="text-[11px] text-slate-400">Inspect AlloyDB count, Gemini model, & auth</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Protocol Validation Check -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-emerald-400"></i> A2A 0.8 & GE Checklist
+                </h2>
+                <div id="compliance-checklist" class="space-y-2 text-xs">
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800/60">
+                        <span class="text-slate-300">A2A Result (kind: message / task)</span>
+                        <span id="chk-wrapping" class="text-slate-500"><i class="fa-solid fa-minus"></i></span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800/60">
+                        <span class="text-slate-300">Message Role (role: agent)</span>
+                        <span id="chk-role" class="text-slate-500"><i class="fa-solid fa-minus"></i></span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800/60">
+                        <span class="text-slate-300">Clean Introductory Text (parts[0])</span>
+                        <span id="chk-fences" class="text-slate-500"><i class="fa-solid fa-minus"></i></span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800/60">
+                        <span class="text-slate-300">DataPart MIME (application/a2ui+json)</span>
+                        <span id="chk-mime" class="text-slate-500"><i class="fa-solid fa-minus"></i></span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800/60">
+                        <span class="text-slate-300">A2UI 0.8 Object Container (data: dict)</span>
+                        <span id="chk-dict" class="text-slate-500"><i class="fa-solid fa-minus"></i></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Interactive Chat & Live A2UI Deck -->
+        <div class="lg:col-span-8 flex flex-col space-y-4">
+            <!-- Execution Transcript & Deck View -->
+            <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col min-h-[480px]">
+                <!-- Tabs -->
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                    <div class="flex space-x-2">
+                        <button onclick="switchTab('rendered')" id="tab-rendered" class="text-xs px-3 py-1.5 rounded-lg bg-sky-500/20 text-sky-400 font-semibold border border-sky-500/30">
+                            <i class="fa-solid fa-desktop mr-1.5"></i> Rendered Output & A2UI Cards
+                        </button>
+                        <button onclick="switchTab('raw')" id="tab-raw" class="text-xs px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200">
+                            <i class="fa-solid fa-code mr-1.5"></i> Raw JSON-RPC Response
+                        </button>
+                    </div>
+                    <div id="exec-metrics" class="text-xs text-slate-500 font-mono">
+                        Ready
+                    </div>
+                </div>
+
+                <!-- Tab 1: Rendered Markdown & A2UI Components -->
+                <div id="view-rendered" class="flex-1 overflow-y-auto space-y-6 max-h-[600px]">
+                    <div id="chat-messages" class="space-y-4">
+                        <div class="p-4 rounded-lg bg-slate-950/60 border border-slate-800 text-slate-400 text-xs flex items-center gap-3">
+                            <i class="fa-solid fa-info-circle text-sky-400 text-base"></i>
+                            <span>Send a prompt below or pick a quick command from the left palette to execute against the live Cloud Run A2A agent.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Raw JSON -->
+                <div id="view-raw" class="hidden flex-1 overflow-y-auto max-h-[600px]">
+                    <pre id="raw-json-output" class="text-xs font-mono text-emerald-400 bg-slate-950 p-4 rounded-lg border border-slate-800 overflow-x-auto">{}</pre>
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+                <input id="prompt-input" type="text" placeholder="Ask AI Daily Brief (e.g., 'list research papers' or 'Generate today\'s executive intelligence summary')..." class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500" onkeydown="if(event.key==='Enter') executePrompt()">
+                <button id="send-btn" onclick="executePrompt()" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold px-5 py-2.5 rounded-lg text-sm transition flex items-center gap-2 cursor-pointer">
+                    <span>Send</span> <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'rendered';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const tabRendered = document.getElementById('tab-rendered');
+            const tabRaw = document.getElementById('tab-raw');
+            const viewRendered = document.getElementById('view-rendered');
+            const viewRaw = document.getElementById('view-raw');
+
+            if (tab === 'rendered') {
+                tabRendered.className = 'text-xs px-3 py-1.5 rounded-lg bg-sky-500/20 text-sky-400 font-semibold border border-sky-500/30';
+                tabRaw.className = 'text-xs px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200';
+                viewRendered.classList.remove('hidden');
+                viewRaw.classList.add('hidden');
+            } else {
+                tabRaw.className = 'text-xs px-3 py-1.5 rounded-lg bg-sky-500/20 text-sky-400 font-semibold border border-sky-500/30';
+                tabRendered.className = 'text-xs px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200';
+                viewRaw.classList.remove('hidden');
+                viewRendered.classList.add('hidden');
+            }
+        }
+
+        function sendPrompt(text) {
+            const input = document.getElementById('prompt-input');
+            if (input) {
+                input.value = text;
+                executePrompt();
+            }
+        }
+
+        async function executePrompt() {
+            const input = document.getElementById('prompt-input');
+            if (!input) return;
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            const sendBtn = document.getElementById('send-btn');
+            const agentUrlInput = document.getElementById('agent-url');
+            const agentUrl = agentUrlInput ? agentUrlInput.value.trim() : '';
+            const metrics = document.getElementById('exec-metrics');
+            const chatMessages = document.getElementById('chat-messages');
+
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Invoking...';
+            }
+            if (metrics) {
+                metrics.innerHTML = '<span class="text-sky-400 animate-pulse"><i class="fa-solid fa-circle-notch fa-spin"></i> Invoking A2A Agent...</span>';
+            }
+
+            // Append user bubble
+            if (chatMessages) {
+                const userBubble = document.createElement('div');
+                userBubble.className = 'flex justify-end';
+                userBubble.innerHTML = `
+                    <div class="bg-sky-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-xl text-sm shadow-md">
+                        ${prompt}
+                    </div>
+                `;
+                chatMessages.appendChild(userBubble);
+                scrollToBottom();
+            }
+            input.value = '';
+
+            const startTime = performance.now();
+
+            try {
+                const res = await fetch('/api/invoke', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        agent_url: agentUrl
+                    })
+                });
+
+                const data = await res.json();
+                const latency = Math.round(performance.now() - startTime);
+                if (metrics) {
+                    metrics.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-check"></i> ${latency}ms</span>`;
+                }
+
+                // Update Raw Tab
+                const rawOutput = document.getElementById('raw-json-output');
+                if (rawOutput) {
+                    rawOutput.textContent = JSON.stringify(data, null, 2);
+                }
+
+                // Run compliance checks
+                validateCompliance(data);
+
+                // Render Agent Response
+                if (chatMessages) {
+                    renderAgentResponse(data, chatMessages);
+                }
+
+            } catch (err) {
+                if (metrics) {
+                    metrics.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-xmark"></i> Error</span>`;
+                }
+                if (chatMessages) {
+                    const errBubble = document.createElement('div');
+                    errBubble.className = 'flex justify-start';
+                    errBubble.innerHTML = `
+                        <div class="bg-rose-950/80 border border-rose-800 text-rose-300 rounded-2xl rounded-tl-sm p-4 text-xs">
+                            <strong>Execution Error:</strong> ${err.message}
+                        </div>
+                    `;
+                    chatMessages.appendChild(errBubble);
+                    scrollToBottom();
+                }
+            } finally {
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = '<span>Send</span> <i class="fa-solid fa-paper-plane"></i>';
+                }
+                scrollToBottom();
+            }
+        }
+
+        function scrollToBottom() {
+            const viewRendered = document.getElementById('view-rendered');
+            if (viewRendered) {
+                viewRendered.scrollTo({
+                    top: viewRendered.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        function validateCompliance(data) {
+            const hasResult = data?.result !== undefined && data?.error === undefined;
+            const resObj = data?.result;
+            const role = resObj?.role || resObj?.status?.message?.role;
+            const parts = resObj?.parts || resObj?.status?.message?.parts || [];
+
+            const isWrapped = hasResult && (resObj?.kind === 'message' || resObj?.kind === 'task' || resObj?.messageId !== undefined || resObj?.id !== undefined);
+            const isRoleAgent = (role === 'agent' || role === 'ROLE_AGENT');
+            const noMonospaceFences = !parts.some(p => p.text && p.text.trim().startsWith('```markdown'));
+            const hasMime = parts.some(p => p.metadata?.mimeType === 'application/a2ui+json' || p.mimeType === 'application/a2ui+json');
+            const isDictContainer = parts.some(p => p.kind === 'data' && typeof p.data === 'object' && !Array.isArray(p.data));
+
+            setCheck('chk-wrapping', isWrapped);
+            setCheck('chk-role', isRoleAgent);
+            setCheck('chk-fences', noMonospaceFences);
+            setCheck('chk-mime', hasMime);
+            setCheck('chk-dict', isDictContainer);
+        }
+
+        function setCheck(id, pass) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (pass) {
+                el.className = 'text-emerald-400 font-bold';
+                el.innerHTML = '<i class="fa-solid fa-check"></i> PASS';
+            } else {
+                el.className = 'text-rose-400 font-bold';
+                el.innerHTML = '<i class="fa-solid fa-xmark"></i> FAIL';
+            }
+        }
+
+        function extractA2UIComponents(p) {
+            if (!p || !p.data) return [];
+            const data = p.data;
+            let rawComps = [];
+
+            if (data.updateComponents && Array.isArray(data.updateComponents.components)) {
+                rawComps = data.updateComponents.components;
+            } else if (Array.isArray(data.components)) {
+                rawComps = data.components;
+            } else if (Array.isArray(data.instructions)) {
+                data.instructions.forEach(inst => {
+                    if (inst.updateComponents && Array.isArray(inst.updateComponents.components)) {
+                        rawComps.push(...inst.updateComponents.components);
+                    }
+                });
+            } else if (Array.isArray(data)) {
+                data.forEach(item => {
+                    if (item.updateComponents && Array.isArray(item.updateComponents.components)) {
+                        rawComps.push(...item.updateComponents.components);
+                    } else if (item.id || item.title || item.component) {
+                        rawComps.push(item);
+                    }
+                });
+            } else if (data.id || data.title || data.props || data.component) {
+                rawComps.push(data);
+            }
+
+            if (rawComps.length === 0) return [];
+
+            const compMap = {};
+            rawComps.forEach(c => {
+                if (c && c.id) compMap[c.id] = c;
+            });
+
+            const isTree = rawComps.some(c => c.component && c.component.startsWith('Material'));
+            if (!isTree) {
+                return rawComps;
+            }
+
+            const cards = [];
+            const cardNodes = rawComps.filter(c => c.component === 'MaterialCard');
+
+            function getDescendantTexts(nodeId) {
+                const node = compMap[nodeId];
+                if (!node) return [];
+                const res = [];
+                if (node.component === 'MaterialText') {
+                    res.push(node);
+                }
+                const children = node.children || (node.child ? [node.child] : []);
+                children.forEach(chId => {
+                    res.push(...getDescendantTexts(chId));
+                });
+                return res;
+            }
+
+            function getDescendantBadges(nodeId) {
+                const node = compMap[nodeId];
+                if (!node) return [];
+                const res = [];
+                if (node.component === 'MaterialBadge') {
+                    res.push(node);
+                }
+                const children = node.children || (node.child ? [node.child] : []);
+                children.forEach(chId => {
+                    res.push(...getDescendantBadges(chId));
+                });
+                return res;
+            }
+
+            function getDescendantButtons(nodeId) {
+                const node = compMap[nodeId];
+                if (!node) return [];
+                const res = [];
+                if (node.component === 'MaterialButton' || node.component === 'MaterialIconButton') {
+                    res.push(node);
+                }
+                const children = node.children || (node.child ? [node.child] : []);
+                children.forEach(chId => {
+                    res.push(...getDescendantButtons(chId));
+                });
+                return res;
+            }
+
+            cardNodes.forEach(cardNode => {
+                const texts = getDescendantTexts(cardNode.id);
+                const badges = getDescendantBadges(cardNode.id);
+                const buttons = getDescendantButtons(cardNode.id);
+
+                let title = '';
+                let subtitle = '';
+                let content = '';
+
+                const hTexts = texts.filter(t => t.usageHint === 'h2' || t.usageHint === 'h3' || t.usageHint === 'h1');
+                const capTexts = texts.filter(t => t.usageHint === 'caption');
+                const bodyTexts = texts.filter(t => t.usageHint === 'body1' || t.usageHint === 'body2' || !t.usageHint);
+
+                if (hTexts.length > 0) title = hTexts[0].text;
+                else if (texts.length > 0) title = texts[0].text;
+
+                if (capTexts.length > 0) subtitle = capTexts[0].text;
+                if (bodyTexts.length > 0) content = bodyTexts[0].text;
+
+                const badgeText = badges.length > 0 ? (badges[0].text || 'Card') : 'Intelligence';
+
+                let articleId = '';
+                let url = '';
+                const actions = [];
+
+                buttons.forEach(btn => {
+                    const ev = btn.action?.event || {};
+                    const actName = ev.name || btn.name || 'prompt';
+                    const actContext = ev.context || {};
+                    const label = btn.label || btn.text || 'Action';
+
+                    if (actContext.article_id) articleId = actContext.article_id;
+                    if (actContext.url) url = actContext.url;
+
+                    actions.push({
+                        actionType: actName,
+                        label: label,
+                        payload: actContext,
+                    });
+                });
+
+                cards.push({
+                    id: cardNode.id,
+                    title: title || 'Intelligence Card',
+                    subtitle: subtitle,
+                    badge: badgeText,
+                    content: content,
+                    articleId: articleId,
+                    url: url,
+                    actions: actions,
+                });
+            });
+
+            return cards.length > 0 ? cards : rawComps;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderAgentResponse(data, container) {
+            const resObj = data?.result || data?.task || data;
+            const message = (resObj?.kind === 'message') ? resObj : (resObj?.status?.message || resObj);
+            const parts = message?.parts || resObj?.parts || [];
+            const artifacts = resObj?.artifacts || [];
+
+            let textContent = '';
+            const a2uiCards = [];
+
+            // Extract from parts
+            parts.forEach(p => {
+                if (p.kind === 'text' || p.text) {
+                    if (p.text) {
+                        textContent += p.text + '\n\n';
+                    }
+                }
+                if (p.kind === 'data' || p.data) {
+                    a2uiCards.push(...extractA2UIComponents(p));
+                }
+            });
+
+            // Extract from artifacts
+            artifacts.forEach(a => {
+                (a.parts || []).forEach(p => {
+                    if (p.data) {
+                        a2uiCards.push(...extractA2UIComponents(p));
+                    }
+                });
+            });
+
+            const agentBubble = document.createElement('div');
+            agentBubble.className = 'flex justify-start space-x-3';
+
+            let cardsHtml = '';
+            if (a2uiCards.length > 0) {
+                cardsHtml = '<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">';
+                a2uiCards.forEach((card, idx) => {
+                    const props = card.props || card;
+                    const title = props.title || card.title || 'Untitled Card';
+                    const subtitle = props.subtitle || card.subtitle || '';
+                    const badge = props.badge || card.badge || props.category || card.category || card.component || 'Card';
+                    const content = props.content || props.description || props.body || card.content || card.description || '';
+                    const url = props.url || card.url || '';
+                    const articleId = props.articleId || card.articleId || props.article_id || '';
+                    const actions = props.actions || card.actions || [];
+
+                    cardsHtml += `
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-sky-500/50 transition shadow-lg">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">${escapeHTML(badge)}</span>
+                                    <span class="text-[10px] text-slate-500 font-mono">${escapeHTML(card.id || 'comp_' + (idx + 1))}</span>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-100 mb-1 leading-snug">${escapeHTML(title)}</h3>
+                                ${subtitle ? `<p class="text-xs text-slate-400 mb-2">${escapeHTML(subtitle)}</p>` : ''}
+                                ${content ? `<p class="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded border border-slate-800/80 mb-3 leading-relaxed">${escapeHTML(content)}</p>` : ''}
+                            </div>
+                            ${actions.length > 0 ? `
+                                <div class="pt-3 border-t border-slate-800/80 flex flex-wrap gap-2">
+                                    ${actions.map(act => {
+                                        const actionType = act.actionType || act.action_type || act.type || 'prompt';
+                                        const label = act.label || act.title || 'Execute';
+                                        const payload = act.payload || {};
+                                        const encodedPayload = encodeURIComponent(JSON.stringify(payload));
+                                        const encodedArticleId = encodeURIComponent(articleId);
+                                        const encodedUrl = encodeURIComponent(url);
+                                        return `
+                                            <button 
+                                                type="button"
+                                                data-action-type="${escapeHTML(actionType)}" 
+                                                data-payload="${encodedPayload}" 
+                                                data-article-id="${encodedArticleId}" 
+                                                data-url="${encodedUrl}"
+                                                class="card-action-btn text-xs bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2.5 py-1 rounded-md transition flex items-center gap-1.5 cursor-pointer">
+                                                <i class="fa-solid fa-play text-[10px]"></i> ${escapeHTML(label)}
+                                            </button>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                cardsHtml += '</div>';
+            }
+
+            agentBubble.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0 mt-1 shadow-md">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div class="flex-1 bg-slate-950 border border-slate-800 rounded-2xl rounded-tl-sm p-5 text-slate-200 text-sm shadow-md">
+                    <div class="markdown-body">
+                        ${marked.parse(textContent || '*Execution completed with visual cards.*')}
+                    </div>
+                    ${cardsHtml}
+                </div>
+            `;
+            container.appendChild(agentBubble);
+            scrollToBottom();
+        }
+
+        // Global Event Delegation for all A2UI Card Buttons
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.card-action-btn');
+            if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const actionType = btn.getAttribute('data-action-type');
+                const encodedPayload = btn.getAttribute('data-payload') || '';
+                const encodedArticleId = btn.getAttribute('data-article-id') || '';
+                const encodedUrl = btn.getAttribute('data-url') || '';
+
+                let payload = {};
+                try {
+                    if (encodedPayload) payload = JSON.parse(decodeURIComponent(encodedPayload));
+                } catch (_) {}
+
+                const articleId = decodeURIComponent(encodedArticleId);
+                const url = decodeURIComponent(encodedUrl);
+                handleCardAction(actionType, payload, articleId, url);
+            }
+        });
+
+        function handleCardAction(actionType, payload, defaultArticleId, defaultUrl) {
+            if (actionType === 'generate_tldr') {
+                if (payload.prompt) {
+                    sendPrompt(payload.prompt);
+                } else if (payload.days == 7 || payload.time_span) {
+                    sendPrompt("Show me the overview for the last week");
+                } else if (payload.days == 30) {
+                    sendPrompt("Show me the overview for the last 30 days");
+                } else {
+                    sendPrompt("Generate today's executive intelligence summary");
+                }
+            } else if (actionType === 'trigger_crawl') {
+                sendPrompt(payload.prompt || "Trigger a live intelligence crawl");
+            } else if (actionType === 'list_articles') {
+                if (payload.prompt) {
+                    sendPrompt(payload.prompt);
+                } else {
+                    sendPrompt(`List latest ${payload.category || 'AI papers'}`);
+                }
+            } else if (actionType === 'load_context') {
+                const targetId = payload.article_id || defaultArticleId || payload.url || defaultUrl;
+                sendPrompt(payload.prompt || `Load context for article ${targetId}`);
+            } else if (actionType === 'agent_prompt') {
+                if (payload.prompt) {
+                    sendPrompt(payload.prompt);
+                } else {
+                    sendPrompt(`Summarize article ${defaultArticleId || defaultUrl}`);
+                }
+            } else if (actionType === 'get_system_status' || actionType === 'get_telemetry') {
+                sendPrompt(payload.prompt || "Inspect system telemetry and database status");
+            } else if (actionType === 'open_url') {
+                const targetUrl = payload.url || defaultUrl;
+                if (targetUrl) {
+                    window.open(targetUrl, '_blank');
+                }
+            } else {
+                sendPrompt(payload.prompt || `Action ${actionType}`);
+            }
+        }
+
+        async function checkAgentHealth() {
+            const agentUrlInput = document.getElementById('agent-url');
+            const agentUrl = agentUrlInput ? agentUrlInput.value.trim() : '';
+            const badge = document.getElementById('health-badge');
+            if (!badge) return;
+            badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
+            try {
+                const res = await fetch(`/api/health?agent_url=${encodeURIComponent(agentUrl)}`);
+                const data = await res.json();
+                if (data.status === 200) {
+                    badge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5';
+                    badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Agent Ready';
+                } else {
+                    badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1.5';
+                    badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Agent Error ' + data.status;
+                }
+            } catch (err) {
+                badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1.5';
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> Offline';
+            }
+        }
+    </script>
+</body>
+</html>
