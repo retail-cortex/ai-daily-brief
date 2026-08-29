@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  🛠️ Troubleshooting Guide
+  #
+
+This guide covers common issues, edge cases, and debugging workflows when developing, deploying, and operating AI Daily Brief on Google Cloud Run, AlloyDB, and Gemini Enterprise.
+
+
+  1. Connecting to AlloyDB with Local Auth Proxy &amp; Running MCP Locally
+  #
+
+When developing or debugging locally, you can connect your local workstation directly to the private Google Cloud AlloyDB cluster using the AlloyDB Auth Proxy.
+┌─────────────────────────────────┐          ┌───────────────────────────┐          ┌───────────────────────────┐
+│       Local Workstation         │          │     Google Cloud IAM      │          │     Private VPC Network   │
+│                                 │          │                           │          │                           │
+│  [Local MCP Server]             │          │                           │          │                           │
+│   (port :8080)                  │          │                           │          │                           │
+│        │                        │          │                           │          │                           │
+│        ▼ localhost:5432         │          │                           │          │                           │
+│  [alloydb-auth-proxy] ──────────┼─────────►│ Authenticates via gcloud  │─────────►│  AlloyDB Primary Instance │
+│   (mTLS Tunnel)                 │          │ (roles/alloydb.client)    │          │  (Port 5432, Private IP)  │
+└─────────────────────────────────┘          └───────────────────────────┘          └───────────────────────────┘
+
+  Step 1: Install the AlloyDB Auth Proxy
+  #
+
+If you don&rsquo;t already have the proxy installed:">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/docs/troubleshooting/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="Troubleshooting Guide">
+	<meta property="og:description" content="🛠️ Troubleshooting Guide # This guide covers common issues, edge cases, and debugging workflows when developing, deploying, and operating AI Daily Brief on Google Cloud Run, AlloyDB, and Gemini Enterprise.
+1. Connecting to AlloyDB with Local Auth Proxy &amp; Running MCP Locally # When developing or debugging locally, you can connect your local workstation directly to the private Google Cloud AlloyDB cluster using the AlloyDB Auth Proxy.
+┌─────────────────────────────────┐ ┌───────────────────────────┐ ┌───────────────────────────┐ │ Local Workstation │ │ Google Cloud IAM │ │ Private VPC Network │ │ │ │ │ │ │ │ [Local MCP Server] │ │ │ │ │ │ (port :8080) │ │ │ │ │ │ │ │ │ │ │ │ │ ▼ localhost:5432 │ │ │ │ │ │ [alloydb-auth-proxy] ──────────┼─────────►│ Authenticates via gcloud │─────────►│ AlloyDB Primary Instance │ │ (mTLS Tunnel) │ │ (roles/alloydb.client) │ │ (Port 5432, Private IP) │ └─────────────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘ Step 1: Install the AlloyDB Auth Proxy # If you don’t already have the proxy installed:">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="docs">
+<title>Troubleshooting Guide | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/docs/troubleshooting/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="active">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Troubleshooting Guide</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-connecting-to-alloydb-with-local-auth-proxy--running-mcp-locally">1. Connecting to AlloyDB with Local Auth Proxy &amp; Running MCP Locally</a>
+      <ul>
+        <li><a href="#step-1-install-the-alloydb-auth-proxy">Step 1: Install the AlloyDB Auth Proxy</a></li>
+        <li><a href="#step-2-grant-required-iam-roles">Step 2: Grant Required IAM Roles</a></li>
+        <li><a href="#step-3-start-the-alloydb-auth-proxy">Step 3: Start the AlloyDB Auth Proxy</a></li>
+        <li><a href="#step-4-verify-database-access-with-psql">Step 4: Verify Database Access with <code>psql</code></a></li>
+        <li><a href="#step-5-run-the-mcp-server-locally-pointing-to-alloydb">Step 5: Run the MCP Server Locally Pointing to AlloyDB</a></li>
+        <li><a href="#step-6-test-local-mcp-server-tools">Step 6: Test Local MCP Server Tools</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-cloud-run-endpoint-invocations--probes">2. Cloud Run Endpoint Invocations &amp; Probes</a>
+      <ul>
+        <li><a href="#a-404-not-found-on-get-healthz">A. <code>404 (Not Found)</code> on <code>GET /healthz</code></a></li>
+        <li><a href="#b-failed_precondition-domain-restricted-sharing-drs">B. <code>FAILED_PRECONDITION: Domain Restricted Sharing (DRS)</code></a></li>
+        <li><a href="#c-403-forbidden-insufficient_scope--lacks-runroutesinvoke">C. <code>403 Forbidden</code> (<code>insufficient_scope</code> / <code>lacks run.routes.invoke</code>)</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-database-persistence--redeployment-safety">3. Database Persistence &amp; Redeployment Safety</a>
+      <ul>
+        <li><a href="#will-the-database-be-recreated-on-application-redeployment">Will the Database be Recreated on Application Redeployment?</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-gemini-enterprise--a2ui-mime-types">4. Gemini Enterprise &amp; A2UI MIME Types</a>
+      <ul>
+        <li><a href="#standard-mime-type-applicationa2uijson">Standard MIME Type: <code>application/a2ui+json</code></a></li>
+      </ul>
+    </li>
+    <li><a href="#5-triggering-the-batch-crawl-process">5. Triggering the Batch Crawl Process</a>
+      <ul>
+        <li><a href="#method-1-via-rest-api">Method 1: Via REST API</a></li>
+        <li><a href="#method-2-via-model-context-protocol-mcp">Method 2: Via Model Context Protocol (MCP)</a></li>
+        <li><a href="#method-3-automated-cron-scheduler">Method 3: Automated Cron Scheduler</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-verifying-database-logs--execution-history">6. Verifying Database Logs &amp; Execution History</a>
+      <ul>
+        <li><a href="#inspect-cloud-run-application-logs">Inspect Cloud Run Application Logs</a></li>
+        <li><a href="#retrieve-execution-run-history">Retrieve Execution Run History</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-troubleshooting-guide">
+  🛠️ Troubleshooting Guide
+  <a class="anchor" href="#-troubleshooting-guide">#</a>
+</h1>
+<p>This guide covers common issues, edge cases, and debugging workflows when developing, deploying, and operating <strong>AI Daily Brief</strong> on Google Cloud Run, AlloyDB, and Gemini Enterprise.</p>
+<hr>
+<h2 id="1-connecting-to-alloydb-with-local-auth-proxy--running-mcp-locally">
+  1. Connecting to AlloyDB with Local Auth Proxy &amp; Running MCP Locally
+  <a class="anchor" href="#1-connecting-to-alloydb-with-local-auth-proxy--running-mcp-locally">#</a>
+</h2>
+<p>When developing or debugging locally, you can connect your local workstation directly to the private Google Cloud AlloyDB cluster using the <strong>AlloyDB Auth Proxy</strong>.</p>
+<pre tabindex="0"><code>┌─────────────────────────────────┐          ┌───────────────────────────┐          ┌───────────────────────────┐
+│       Local Workstation         │          │     Google Cloud IAM      │          │     Private VPC Network   │
+│                                 │          │                           │          │                           │
+│  [Local MCP Server]             │          │                           │          │                           │
+│   (port :8080)                  │          │                           │          │                           │
+│        │                        │          │                           │          │                           │
+│        ▼ localhost:5432         │          │                           │          │                           │
+│  [alloydb-auth-proxy] ──────────┼─────────►│ Authenticates via gcloud  │─────────►│  AlloyDB Primary Instance │
+│   (mTLS Tunnel)                 │          │ (roles/alloydb.client)    │          │  (Port 5432, Private IP)  │
+└─────────────────────────────────┘          └───────────────────────────┘          └───────────────────────────┘
+</code></pre><h3 id="step-1-install-the-alloydb-auth-proxy">
+  Step 1: Install the AlloyDB Auth Proxy
+  <a class="anchor" href="#step-1-install-the-alloydb-auth-proxy">#</a>
+</h3>
+<p>If you don&rsquo;t already have the proxy installed:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># macOS (Homebrew or direct binary)</span>
+</span></span><span style="display:flex;"><span>curl -o alloydb-auth-proxy https://storage.googleapis.com/alloydb-auth-proxy/v1.10.0/alloydb-auth-proxy.darwin.arm64
+</span></span><span style="display:flex;"><span>chmod +x alloydb-auth-proxy
+</span></span><span style="display:flex;"><span>sudo mv alloydb-auth-proxy /usr/local/bin/
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Linux AMD64</span>
+</span></span><span style="display:flex;"><span>curl -o alloydb-auth-proxy https://storage.googleapis.com/alloydb-auth-proxy/v1.10.0/alloydb-auth-proxy.linux.amd64
+</span></span><span style="display:flex;"><span>chmod +x alloydb-auth-proxy
+</span></span><span style="display:flex;"><span>sudo mv alloydb-auth-proxy /usr/local/bin/
+</span></span></code></pre></div><h3 id="step-2-grant-required-iam-roles">
+  Step 2: Grant Required IAM Roles
+  <a class="anchor" href="#step-2-grant-required-iam-roles">#</a>
+</h3>
+<p>Ensure your user identity has the <code>AlloyDB Client</code> role:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>gcloud projects add-iam-policy-binding <span style="color:#e6db74">${</span>PROJECT_ID<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --member<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;user:</span><span style="color:#66d9ef">$(</span>gcloud config get-value account<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --role<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;roles/alloydb.client&#34;</span>
+</span></span></code></pre></div><h3 id="step-3-start-the-alloydb-auth-proxy">
+  Step 3: Start the AlloyDB Auth Proxy
+  <a class="anchor" href="#step-3-start-the-alloydb-auth-proxy">#</a>
+</h3>
+<p>Run the proxy locally to create an encrypted mTLS tunnel to your AlloyDB instance:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Instance connection string format:</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># projects/&lt;PROJECT_ID&gt;/locations/&lt;REGION&gt;/clusters/&lt;CLUSTER_NAME&gt;/instances/&lt;INSTANCE_NAME&gt;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>alloydb-auth-proxy <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;projects/</span><span style="color:#e6db74">${</span>PROJECT_ID<span style="color:#e6db74">}</span><span style="color:#e6db74">/locations/us-central1/clusters/ai-daily-brief-alloydb-dev/instances/ai-daily-brief-alloydb-dev-primary&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --port<span style="color:#f92672">=</span><span style="color:#ae81ff">5432</span>
+</span></span></code></pre></div><blockquote>
+<p>[!NOTE]
+Leave this terminal process running in the background. It listens on <code>127.0.0.1:5432</code> and forwards traffic securely to AlloyDB.</p>
+</blockquote>
+<h3 id="step-4-verify-database-access-with-psql">
+  Step 4: Verify Database Access with <code>psql</code>
+  <a class="anchor" href="#step-4-verify-database-access-with-psql">#</a>
+</h3>
+<p>In a separate terminal, test the connection using the standard PostgreSQL CLI:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Retrieve the database password from Secret Manager (if stored)</span>
+</span></span><span style="display:flex;"><span>DB_PASS<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>gcloud secrets versions access latest --secret<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;ai-daily-brief-db-password-dev&#34;</span> --project<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>PROJECT_ID<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> 2&gt;/dev/null <span style="color:#f92672">||</span> echo <span style="color:#e6db74">&#34;your-db-password&#34;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Connect via localhost:5432 through the proxy</span>
+</span></span><span style="display:flex;"><span>PGPASSWORD<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>DB_PASS<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span> psql -h 127.0.0.1 -p <span style="color:#ae81ff">5432</span> -U postgres -d ai_daily_brief -c <span style="color:#e6db74">&#34;\dt&#34;</span>
+</span></span></code></pre></div><h3 id="step-5-run-the-mcp-server-locally-pointing-to-alloydb">
+  Step 5: Run the MCP Server Locally Pointing to AlloyDB
+  <a class="anchor" href="#step-5-run-the-mcp-server-locally-pointing-to-alloydb">#</a>
+</h3>
+<p>Start the local MCP server with <code>ALLOYDB_DATABASE_URL</code> pointing at the local proxy port:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>export ALLOYDB_DATABASE_URL<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;postgres://postgres:</span><span style="color:#e6db74">${</span>DB_PASS<span style="color:#e6db74">}</span><span style="color:#e6db74">@127.0.0.1:5432/ai_daily_brief?sslmode=disable&#34;</span>
+</span></span><span style="display:flex;"><span>export GOOGLE_CLOUD_PROJECT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>PROJECT_ID<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>export GCP_REGION<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;us-central1&#34;</span>
+</span></span><span style="display:flex;"><span>export MODENV_PROFILE<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;dev&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Run via Bazel</span>
+</span></span><span style="display:flex;"><span>bazel run //cmd/mcp-server
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Or run directly with Go</span>
+</span></span><span style="display:flex;"><span>go run ./cmd/mcp-server
+</span></span></code></pre></div><h3 id="step-6-test-local-mcp-server-tools">
+  Step 6: Test Local MCP Server Tools
+  <a class="anchor" href="#step-6-test-local-mcp-server-tools">#</a>
+</h3>
+<p>Verify that your local MCP server is talking to AlloyDB and serving tools with <code>application/a2ui+json</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 1. Inspect status</span>
+</span></span><span style="display:flex;"><span>curl -s http://localhost:8080/api/status | jq .
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 2. Call MCP list_articles tool</span>
+</span></span><span style="display:flex;"><span>curl -s -X POST http://localhost:8080/mcp <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -d <span style="color:#e6db74">&#39;{&#34;jsonrpc&#34;: &#34;2.0&#34;, &#34;method&#34;: &#34;tools/call&#34;, &#34;params&#34;: {&#34;name&#34;: &#34;list_articles&#34;, &#34;arguments&#34;: {&#34;limit&#34;: 3}}, &#34;id&#34;: 1}&#39;</span> | jq .
+</span></span></code></pre></div><hr>
+<h2 id="2-cloud-run-endpoint-invocations--probes">
+  2. Cloud Run Endpoint Invocations &amp; Probes
+  <a class="anchor" href="#2-cloud-run-endpoint-invocations--probes">#</a>
+</h2>
+<h3 id="a-404-not-found-on-get-healthz">
+  A. <code>404 (Not Found)</code> on <code>GET /healthz</code>
+  <a class="anchor" href="#a-404-not-found-on-get-healthz">#</a>
+</h3>
+<p><strong>Symptom:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>jq: parse error: Invalid numeric literal at line 1, column 10
+</span></span><span style="display:flex;"><span>&lt;!DOCTYPE html&gt;
+</span></span><span style="display:flex;"><span>&lt;title&gt;Error 404 (Not Found)!!1&lt;/title&gt;
+</span></span><span style="display:flex;"><span>The requested URL /healthz was not found on this server. That&#39;s all we know.
+</span></span></code></pre></div><p><strong>Root Causes:</strong></p>
+<ol>
+<li><strong>Internal Probe Reservation:</strong> Google Front End (GFE) intercepts <code>/healthz</code> internally on <code>.run.app</code> URLs for container startup and liveness probes. External HTTP requests to <code>/healthz</code> over public hostnames are dropped/intercepted before reaching the container.</li>
+<li><strong>Audience Mismatch:</strong> If an OIDC identity token is minted with a generic Google Client ID rather than the exact Cloud Run service URL, GFE rejects the request with a standard Google 404.</li>
+</ol>
+<p><strong>Resolution:</strong>
+To verify the service externally, invoke the MCP endpoint (<code>POST /mcp</code>) or REST API (<code>GET /api/status</code>, <code>POST /api/batch/run</code>) using an audience-bound OIDC token:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>export ENDPOINT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;https://ai-daily-brief-mcp-dev-</span><span style="color:#e6db74">${</span>PROJECT_NUMBER<span style="color:#e6db74">}</span><span style="color:#e6db74">.us-central1.run.app&#34;</span>
+</span></span><span style="display:flex;"><span>ACCESS_TOKEN<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>gcloud auth print-access-token<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Mint OIDC Token bound to the exact Cloud Run audience</span>
+</span></span><span style="display:flex;"><span>TOKEN<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>curl -s -X POST <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Authorization: Bearer </span>$ACCESS_TOKEN<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -d <span style="color:#e6db74">&#34;{\&#34;audience\&#34;: \&#34;</span><span style="color:#e6db74">${</span>ENDPOINT<span style="color:#e6db74">}</span><span style="color:#e6db74">\&#34;, \&#34;includeEmail\&#34;: true}&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/ai-daily-brief-sa-dev@</span><span style="color:#e6db74">${</span>PROJECT_ID<span style="color:#e6db74">}</span><span style="color:#e6db74">.iam.gserviceaccount.com:generateIdToken&#34;</span> | jq -r .token<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Test MCP Tool Listing</span>
+</span></span><span style="display:flex;"><span>curl -s -X POST -H <span style="color:#e6db74">&#34;Authorization: Bearer </span>$TOKEN<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -d <span style="color:#e6db74">&#39;{&#34;jsonrpc&#34;: &#34;2.0&#34;, &#34;method&#34;: &#34;tools/list&#34;, &#34;id&#34;: 1}&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>ENDPOINT<span style="color:#e6db74">}</span><span style="color:#e6db74">/mcp&#34;</span> | jq .
+</span></span></code></pre></div><hr>
+<h3 id="b-failed_precondition-domain-restricted-sharing-drs">
+  B. <code>FAILED_PRECONDITION: Domain Restricted Sharing (DRS)</code>
+  <a class="anchor" href="#b-failed_precondition-domain-restricted-sharing-drs">#</a>
+</h3>
+<p><strong>Symptom:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>ERROR: (gcloud.run.services.add-iam-policy-binding) FAILED_PRECONDITION: One or more users named in the policy do not belong to a permitted customer, perhaps due to an organization policy.
+</span></span></code></pre></div><p><strong>Root Cause:</strong>
+Your Google Cloud Organization enforces <code>constraints/iam.allowedPolicyMemberDomains</code>, preventing <code>allUsers</code> (public unauthenticated access) from being granted <code>roles/run.invoker</code>.</p>
+<p><strong>Resolution:</strong></p>
+<ol>
+<li>Keep <code>allow_unauthenticated = false</code> in your configuration (<code>deployments/mcp/terraform/environments/dev.tfvars</code> or <code>deployments/agent/terraform/environments/dev.tfvars</code>).</li>
+<li>Grant IAM Invoker access to specific domain users or runtime service accounts:
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>gcloud run services add-iam-policy-binding ai-daily-brief-mcp-dev <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --region us-central1 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --member<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;serviceAccount:ai-daily-brief-sa-dev@</span><span style="color:#e6db74">${</span>PROJECT_ID<span style="color:#e6db74">}</span><span style="color:#e6db74">.iam.gserviceaccount.com&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --role<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;roles/run.invoker&#34;</span>
+</span></span></code></pre></div></li>
+</ol>
+<hr>
+<h3 id="c-403-forbidden-insufficient_scope--lacks-runroutesinvoke">
+  C. <code>403 Forbidden</code> (<code>insufficient_scope</code> / <code>lacks run.routes.invoke</code>)
+  <a class="anchor" href="#c-403-forbidden-insufficient_scope--lacks-runroutesinvoke">#</a>
+</h3>
+<p><strong>Symptom:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>The request was not authenticated. The IAM principal lacks {run.routes.invoke} permission.
+</span></span></code></pre></div><p><strong>Resolution:</strong>
+Ensure the caller has the required IAM roles:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Grant project-level invoker role</span>
+</span></span><span style="display:flex;"><span>gcloud projects add-iam-policy-binding YOUR_PROJECT_ID <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --member<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;user:YOUR_EMAIL&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --role<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;roles/run.invoker&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Grant Service Account Token &amp; OpenID Token Creator roles (to mint audience tokens)</span>
+</span></span><span style="display:flex;"><span>gcloud projects add-iam-policy-binding YOUR_PROJECT_ID <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --member<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;user:YOUR_EMAIL&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --role<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;roles/iam.serviceAccountOpenIdTokenCreator&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>gcloud projects add-iam-policy-binding YOUR_PROJECT_ID <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --member<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;user:YOUR_EMAIL&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --role<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;roles/iam.serviceAccountTokenCreator&#34;</span>
+</span></span></code></pre></div><hr>
+<h2 id="3-database-persistence--redeployment-safety">
+  3. Database Persistence &amp; Redeployment Safety
+  <a class="anchor" href="#3-database-persistence--redeployment-safety">#</a>
+</h2>
+<h3 id="will-the-database-be-recreated-on-application-redeployment">
+  Will the Database be Recreated on Application Redeployment?
+  <a class="anchor" href="#will-the-database-be-recreated-on-application-redeployment">#</a>
+</h3>
+<p><strong>No, the database is completely preserved across all container redeployments and Terraform updates.</strong></p>
+<ol>
+<li><strong>Decoupled Lifecycle:</strong> In <code>deployments/mcp/terraform/main.tf</code>, <code>google_alloydb_cluster</code> and <code>google_alloydb_instance</code> are standalone resources decoupled from <code>google_cloud_run_v2_service</code>. Redeploying the container image (<code>gcloud run deploy</code> or Cloud Build) updates only the stateless Cloud Run container revision.</li>
+<li><strong>Non-Destructive Migrations:</strong> On container startup, <code>internal/database/db.go</code> runs GORM&rsquo;s <code>AutoMigrate</code>:
+<ul>
+<li>It executes <code>CREATE TABLE IF NOT EXISTS</code> and <code>ADD COLUMN</code> queries.</li>
+<li>It <strong>never</strong> drops existing tables, indexes, or rows.</li>
+</ul>
+</li>
+<li><strong>Primary Key Deduplication:</strong> Crawled items use deterministic composite IDs (<code>gcp-rel-&lt;hash&gt;</code>, <code>arxiv-&lt;hash&gt;</code>). Subsequent crawl runs safely skip existing records (<code>ON CONFLICT DO NOTHING</code>).</li>
+</ol>
+<hr>
+<h2 id="4-gemini-enterprise--a2ui-mime-types">
+  4. Gemini Enterprise &amp; A2UI MIME Types
+  <a class="anchor" href="#4-gemini-enterprise--a2ui-mime-types">#</a>
+</h2>
+<h3 id="standard-mime-type-applicationa2uijson">
+  Standard MIME Type: <code>application/a2ui+json</code>
+  <a class="anchor" href="#standard-mime-type-applicationa2uijson">#</a>
+</h3>
+<p>When integrating the MCP server with Gemini Enterprise, tool call outputs must return typed content blocks rather than generic strings.</p>
+<p>The MCP handler returns:</p>
+<ul>
+<li><strong>Block 1 (<code>type: &quot;text&quot;</code>)</strong>: Human-readable ASCII / Unicode cards.</li>
+<li><strong>Block 2 (<code>type: &quot;resource&quot;</code>)</strong>: Embedded resource with <strong><code>mimeType: &quot;application/a2ui+json&quot;</code></strong> containing the serialized A2UI card component tree:</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;resource&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;resource&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;uri&#34;</span>: <span style="color:#e6db74">&#34;brief://a2ui/articles/list&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;mimeType&#34;</span>: <span style="color:#e6db74">&#34;application/a2ui+json&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;text&#34;</span>: <span style="color:#e6db74">&#34;[{\&#34;id\&#34;:\&#34;item_1\&#34;,\&#34;type\&#34;:\&#34;article_card\&#34;,\&#34;title\&#34;:\&#34;...\&#34;}]&#34;</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>[!TIP]
+For complete details on registering the Agent Card and configuring IAM permissions for Discovery Engine, see the <a href="/docs/gemini_enterprise/">Gemini Enterprise Integration Guide</a>.</p>
+</blockquote>
+<hr>
+<h2 id="5-triggering-the-batch-crawl-process">
+  5. Triggering the Batch Crawl Process
+  <a class="anchor" href="#5-triggering-the-batch-crawl-process">#</a>
+</h2>
+<h3 id="method-1-via-rest-api">
+  Method 1: Via REST API
+  <a class="anchor" href="#method-1-via-rest-api">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -s -X POST -H <span style="color:#e6db74">&#34;Authorization: Bearer </span>$TOKEN<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>ENDPOINT<span style="color:#e6db74">}</span><span style="color:#e6db74">/api/batch/run&#34;</span> | jq .
+</span></span></code></pre></div><h3 id="method-2-via-model-context-protocol-mcp">
+  Method 2: Via Model Context Protocol (MCP)
+  <a class="anchor" href="#method-2-via-model-context-protocol-mcp">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -s -X POST -H <span style="color:#e6db74">&#34;Authorization: Bearer </span>$TOKEN<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -d <span style="color:#e6db74">&#39;{&#34;jsonrpc&#34;: &#34;2.0&#34;, &#34;method&#34;: &#34;tools/call&#34;, &#34;params&#34;: {&#34;name&#34;: &#34;trigger_crawl&#34;, &#34;arguments&#34;: {}}, &#34;id&#34;: 1}&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>ENDPOINT<span style="color:#e6db74">}</span><span style="color:#e6db74">/mcp&#34;</span> | jq .
+</span></span></code></pre></div><h3 id="method-3-automated-cron-scheduler">
+  Method 3: Automated Cron Scheduler
+  <a class="anchor" href="#method-3-automated-cron-scheduler">#</a>
+</h3>
+<p>The MCP server includes a built-in background cron scheduler (<code>robfig/cron/v3</code>).</p>
+<ul>
+<li><strong>Default Schedule:</strong> Daily at 08:00 UTC (<code>0 8 * * *</code>).</li>
+<li><strong>Configuration:</strong> Set <code>crawler.schedule</code> in <code>configs/mcp/.env.toml</code> or via environment variable.</li>
+</ul>
+<hr>
+<h2 id="6-verifying-database-logs--execution-history">
+  6. Verifying Database Logs &amp; Execution History
+  <a class="anchor" href="#6-verifying-database-logs--execution-history">#</a>
+</h2>
+<h3 id="inspect-cloud-run-application-logs">
+  Inspect Cloud Run Application Logs
+  <a class="anchor" href="#inspect-cloud-run-application-logs">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>gcloud logging read <span style="color:#e6db74">&#39;resource.type=&#34;cloud_run_revision&#34; AND resource.labels.service_name=&#34;ai-daily-brief-mcp-dev&#34;&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --limit<span style="color:#f92672">=</span><span style="color:#ae81ff">25</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --format<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;table(timestamp,textPayload)&#34;</span>
+</span></span></code></pre></div><h3 id="retrieve-execution-run-history">
+  Retrieve Execution Run History
+  <a class="anchor" href="#retrieve-execution-run-history">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -s -H <span style="color:#e6db74">&#34;Authorization: Bearer </span>$TOKEN<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>ENDPOINT<span style="color:#e6db74">}</span><span style="color:#e6db74">/api/runs&#34;</span> | jq .
+</span></span></code></pre></div></article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/docs/troubleshooting.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-connecting-to-alloydb-with-local-auth-proxy--running-mcp-locally">1. Connecting to AlloyDB with Local Auth Proxy &amp; Running MCP Locally</a>
+      <ul>
+        <li><a href="#step-1-install-the-alloydb-auth-proxy">Step 1: Install the AlloyDB Auth Proxy</a></li>
+        <li><a href="#step-2-grant-required-iam-roles">Step 2: Grant Required IAM Roles</a></li>
+        <li><a href="#step-3-start-the-alloydb-auth-proxy">Step 3: Start the AlloyDB Auth Proxy</a></li>
+        <li><a href="#step-4-verify-database-access-with-psql">Step 4: Verify Database Access with <code>psql</code></a></li>
+        <li><a href="#step-5-run-the-mcp-server-locally-pointing-to-alloydb">Step 5: Run the MCP Server Locally Pointing to AlloyDB</a></li>
+        <li><a href="#step-6-test-local-mcp-server-tools">Step 6: Test Local MCP Server Tools</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-cloud-run-endpoint-invocations--probes">2. Cloud Run Endpoint Invocations &amp; Probes</a>
+      <ul>
+        <li><a href="#a-404-not-found-on-get-healthz">A. <code>404 (Not Found)</code> on <code>GET /healthz</code></a></li>
+        <li><a href="#b-failed_precondition-domain-restricted-sharing-drs">B. <code>FAILED_PRECONDITION: Domain Restricted Sharing (DRS)</code></a></li>
+        <li><a href="#c-403-forbidden-insufficient_scope--lacks-runroutesinvoke">C. <code>403 Forbidden</code> (<code>insufficient_scope</code> / <code>lacks run.routes.invoke</code>)</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-database-persistence--redeployment-safety">3. Database Persistence &amp; Redeployment Safety</a>
+      <ul>
+        <li><a href="#will-the-database-be-recreated-on-application-redeployment">Will the Database be Recreated on Application Redeployment?</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-gemini-enterprise--a2ui-mime-types">4. Gemini Enterprise &amp; A2UI MIME Types</a>
+      <ul>
+        <li><a href="#standard-mime-type-applicationa2uijson">Standard MIME Type: <code>application/a2ui+json</code></a></li>
+      </ul>
+    </li>
+    <li><a href="#5-triggering-the-batch-crawl-process">5. Triggering the Batch Crawl Process</a>
+      <ul>
+        <li><a href="#method-1-via-rest-api">Method 1: Via REST API</a></li>
+        <li><a href="#method-2-via-model-context-protocol-mcp">Method 2: Via Model Context Protocol (MCP)</a></li>
+        <li><a href="#method-3-automated-cron-scheduler">Method 3: Automated Cron Scheduler</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-verifying-database-logs--execution-history">6. Verifying Database Logs &amp; Execution History</a>
+      <ul>
+        <li><a href="#inspect-cloud-run-application-logs">Inspect Cloud Run Application Logs</a></li>
+        <li><a href="#retrieve-execution-run-history">Retrieve Execution Run History</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

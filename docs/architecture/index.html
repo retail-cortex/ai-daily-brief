@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  🏛️ Architecture &amp; System Design
+  #
+
+AI Daily Brief is designed around high concurrency, sub-second latency, and clean separation between data ingestion, agent control planes, and storage engines.
+
+
+  1. High-Performance Parallel Crawling Engine
+  #
+
+The crawler (internal/crawler) uses concurrent Go goroutines with sync.WaitGroup to dispatch scrapers simultaneously across all configured sources:
+                  ┌──────────────────────┐
+                  │ Trigger Batch Crawl  │
+                  └──────────┬───────────┘
+                             │
+      ┌──────────────┬───────┴──────┬──────────────┬──────────────┐
+      ▼              ▼              ▼              ▼              ▼
+┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐
+│ RSS Feeds │  │ arXiv API │  │HuggingFace│  │ GCP Notes │  │ VC Blogs  │
+│(Frontier) │  │  (Papers) │  │  (Papers) │  │  (Cloud)  │  │(Business) │
+└─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
+      │              │              │              │              │
+      └──────────────┼──────────────┼──────────────┼──────────────┘
+                     ▼
+        ┌─────────────────────────┐
+        │ SHA-256 Deduplication   │
+        └────────────┬────────────┘
+                     ▼
+        ┌─────────────────────────┐
+        │ AlloyDB / Postgres DB   │
+        └─────────────────────────┘
+
+Execution Latency: Typically &lt; 900ms to scrape, parse, sanitize, and insert 20–40 new items.
+Deduplication: Every article&rsquo;s unique canonical URL is indexed. Pre-existing records are skipped in memory and database transaction boundaries.
+
+
+
+  2. Dynamic Grounding &amp; Context Extraction
+  #
+
+When an agent requests context for an article (get_article_context or agent_chat), the agent engine invokes agent.FetchFullArticleText(url):">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/docs/architecture/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="Architecture">
+	<meta property="og:description" content="🏛️ Architecture &amp; System Design # AI Daily Brief is designed around high concurrency, sub-second latency, and clean separation between data ingestion, agent control planes, and storage engines.
+1. High-Performance Parallel Crawling Engine # The crawler (internal/crawler) uses concurrent Go goroutines with sync.WaitGroup to dispatch scrapers simultaneously across all configured sources:
+┌──────────────────────┐ │ Trigger Batch Crawl │ └──────────┬───────────┘ │ ┌──────────────┬───────┴──────┬──────────────┬──────────────┐ ▼ ▼ ▼ ▼ ▼ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ │ RSS Feeds │ │ arXiv API │ │HuggingFace│ │ GCP Notes │ │ VC Blogs │ │(Frontier) │ │ (Papers) │ │ (Papers) │ │ (Cloud) │ │(Business) │ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ └─────┬─────┘ │ │ │ │ │ └──────────────┼──────────────┼──────────────┼──────────────┘ ▼ ┌─────────────────────────┐ │ SHA-256 Deduplication │ └────────────┬────────────┘ ▼ ┌─────────────────────────┐ │ AlloyDB / Postgres DB │ └─────────────────────────┘ Execution Latency: Typically &lt; 900ms to scrape, parse, sanitize, and insert 20–40 new items. Deduplication: Every article’s unique canonical URL is indexed. Pre-existing records are skipped in memory and database transaction boundaries. 2. Dynamic Grounding &amp; Context Extraction # When an agent requests context for an article (get_article_context or agent_chat), the agent engine invokes agent.FetchFullArticleText(url):">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="docs">
+<title>Architecture | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/docs/architecture/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="active">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Architecture</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-high-performance-parallel-crawling-engine">1. High-Performance Parallel Crawling Engine</a></li>
+    <li><a href="#2-dynamic-grounding--context-extraction">2. Dynamic Grounding &amp; Context Extraction</a></li>
+    <li><a href="#3-dual-protocol-plane-mcp--rest">3. Dual Protocol Plane (MCP &amp; REST)</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-architecture--system-design">
+  🏛️ Architecture &amp; System Design
+  <a class="anchor" href="#-architecture--system-design">#</a>
+</h1>
+<p>AI Daily Brief is designed around high concurrency, sub-second latency, and clean separation between data ingestion, agent control planes, and storage engines.</p>
+<hr>
+<h2 id="1-high-performance-parallel-crawling-engine">
+  1. High-Performance Parallel Crawling Engine
+  <a class="anchor" href="#1-high-performance-parallel-crawling-engine">#</a>
+</h2>
+<p>The crawler (<code>internal/crawler</code>) uses concurrent Go goroutines with <code>sync.WaitGroup</code> to dispatch scrapers simultaneously across all configured sources:</p>
+<pre tabindex="0"><code>                  ┌──────────────────────┐
+                  │ Trigger Batch Crawl  │
+                  └──────────┬───────────┘
+                             │
+      ┌──────────────┬───────┴──────┬──────────────┬──────────────┐
+      ▼              ▼              ▼              ▼              ▼
+┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐
+│ RSS Feeds │  │ arXiv API │  │HuggingFace│  │ GCP Notes │  │ VC Blogs  │
+│(Frontier) │  │  (Papers) │  │  (Papers) │  │  (Cloud)  │  │(Business) │
+└─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
+      │              │              │              │              │
+      └──────────────┼──────────────┼──────────────┼──────────────┘
+                     ▼
+        ┌─────────────────────────┐
+        │ SHA-256 Deduplication   │
+        └────────────┬────────────┘
+                     ▼
+        ┌─────────────────────────┐
+        │ AlloyDB / Postgres DB   │
+        └─────────────────────────┘
+</code></pre><ul>
+<li><strong>Execution Latency</strong>: Typically <strong>&lt; 900ms</strong> to scrape, parse, sanitize, and insert 20–40 new items.</li>
+<li><strong>Deduplication</strong>: Every article&rsquo;s unique canonical URL is indexed. Pre-existing records are skipped in memory and database transaction boundaries.</li>
+</ul>
+<hr>
+<h2 id="2-dynamic-grounding--context-extraction">
+  2. Dynamic Grounding &amp; Context Extraction
+  <a class="anchor" href="#2-dynamic-grounding--context-extraction">#</a>
+</h2>
+<p>When an agent requests context for an article (<code>get_article_context</code> or <code>agent_chat</code>), the agent engine invokes <code>agent.FetchFullArticleText(url)</code>:</p>
+<ul>
+<li>Downloads live HTML via an optimized HTTP client with custom user-agents.</li>
+<li>Uses <code>goquery</code> to strip boilerplate (scripts, ads, navigation bars, cookie banners, tracking iframes).</li>
+<li>Extracts clean textual content and truncates safely within the LLM context window.</li>
+</ul>
+<hr>
+<h2 id="3-dual-protocol-plane-mcp--rest">
+  3. Dual Protocol Plane (MCP &amp; REST)
+  <a class="anchor" href="#3-dual-protocol-plane-mcp--rest">#</a>
+</h2>
+<p>The unified server exposes two interface models concurrently:</p>
+<ol>
+<li><strong>Model Context Protocol (MCP)</strong>: JSON-RPC 2.0 and Server-Sent Events (SSE) streaming for agent callers (Vertex AI Agent Engine, Cloud Run agents, Antigravity).</li>
+<li><strong>REST API</strong>: HTTP endpoints (<code>/api/items</code>, <code>/api/batch/run</code>, <code>/api/agent/tldr</code>, <code>/ws/live</code>) for webhooks, microservices, and client applications.</li>
+</ol>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/docs/architecture.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-high-performance-parallel-crawling-engine">1. High-Performance Parallel Crawling Engine</a></li>
+    <li><a href="#2-dynamic-grounding--context-extraction">2. Dynamic Grounding &amp; Context Extraction</a></li>
+    <li><a href="#3-dual-protocol-plane-mcp--rest">3. Dual Protocol Plane (MCP &amp; REST)</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

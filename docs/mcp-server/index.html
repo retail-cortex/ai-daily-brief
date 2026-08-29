@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  🤖 Model Context Protocol (MCP) &amp; A2UI
+  #
+
+AI Daily Brief implements the official Model Context Protocol (2024-11-05) specification. It formats responses using dual content blocks:
+
+text: Formatted ASCII / Unicode cards for human readability, terminal logs, and standard markdown consoles.
+resource (mimeType: application/a2ui&#43;json): Structured Agent-to-UI (A2UI) components natively rendered by Gemini Enterprise, Google Agent Space, and rich frontend conversational cards.
+
+
+
+  Content Block Format (Gemini Enterprise Ready)
+  #
+
+When executing tools/call or reading resources/read, the server returns structured MCPContentBlock items:">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/docs/mcp-server/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="MCP Server & A2UI">
+	<meta property="og:description" content="🤖 Model Context Protocol (MCP) &amp; A2UI # AI Daily Brief implements the official Model Context Protocol (2024-11-05) specification. It formats responses using dual content blocks:
+text: Formatted ASCII / Unicode cards for human readability, terminal logs, and standard markdown consoles. resource (mimeType: application/a2ui&#43;json): Structured Agent-to-UI (A2UI) components natively rendered by Gemini Enterprise, Google Agent Space, and rich frontend conversational cards. Content Block Format (Gemini Enterprise Ready) # When executing tools/call or reading resources/read, the server returns structured MCPContentBlock items:">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="docs">
+<title>MCP Server &amp; A2UI | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/docs/mcp-server/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="active">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>MCP Server &amp; A2UI</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#content-block-format-gemini-enterprise-ready">Content Block Format (Gemini Enterprise Ready)</a></li>
+    <li><a href="#supported-tools">Supported Tools</a>
+      <ul>
+        <li><a href="#1-list_articles">1. <code>list_articles</code></a></li>
+        <li><a href="#2-get_article_context">2. <code>get_article_context</code></a></li>
+        <li><a href="#3-generate_tldr">3. <code>generate_tldr</code></a></li>
+        <li><a href="#4-trigger_crawl">4. <code>trigger_crawl</code></a></li>
+        <li><a href="#5-get_newsletter">5. <code>get_newsletter</code></a></li>
+        <li><a href="#6-agent_chat">6. <code>agent_chat</code></a></li>
+        <li><a href="#7-get_system_status">7. <code>get_system_status</code></a></li>
+      </ul>
+    </li>
+    <li><a href="#mcp-resources">MCP Resources</a></li>
+    <li><a href="#invocation--transports">Invocation &amp; Transports</a>
+      <ul>
+        <li><a href="#direct-json-rpc-post-mcp">Direct JSON-RPC (<code>POST /mcp</code>)</a></li>
+        <li><a href="#remote-invocation-on-cloud-run-authenticated">Remote Invocation on Cloud Run (Authenticated)</a></li>
+        <li><a href="#server-sent-events-get-sse--post-message">Server-Sent Events (<code>GET /sse</code> &amp; <code>POST /message</code>)</a></li>
+        <li><a href="#gemini-enterprise--discovery-engine-integration">Gemini Enterprise &amp; Discovery Engine Integration</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-model-context-protocol-mcp--a2ui">
+  🤖 Model Context Protocol (MCP) &amp; A2UI
+  <a class="anchor" href="#-model-context-protocol-mcp--a2ui">#</a>
+</h1>
+<p>AI Daily Brief implements the official <strong>Model Context Protocol (2024-11-05)</strong> specification. It formats responses using <strong>dual content blocks</strong>:</p>
+<ol>
+<li><strong><code>text</code></strong>: Formatted ASCII / Unicode cards for human readability, terminal logs, and standard markdown consoles.</li>
+<li><strong><code>resource</code> (<code>mimeType: application/a2ui+json</code>)</strong>: Structured <strong>Agent-to-UI (A2UI)</strong> components natively rendered by Gemini Enterprise, Google Agent Space, and rich frontend conversational cards.</li>
+</ol>
+<hr>
+<h2 id="content-block-format-gemini-enterprise-ready">
+  Content Block Format (Gemini Enterprise Ready)
+  <a class="anchor" href="#content-block-format-gemini-enterprise-ready">#</a>
+</h2>
+<p>When executing <code>tools/call</code> or reading <code>resources/read</code>, the server returns structured <code>MCPContentBlock</code> items:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;jsonrpc&#34;</span>: <span style="color:#e6db74">&#34;2.0&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;id&#34;</span>: <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;result&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;content&#34;</span>: [
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;text&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;text&#34;</span>: <span style="color:#e6db74">&#34;### 📰 Intelligence Stream (2 records)\n\n┌─────────────────────────────────────────────────────────────\n│ **#1: Google Cloud Release: Feature (August 27, 2026)**\n│ ☁️ Google Cloud &amp; Compute • **Google Cloud** • *2026-08-27*\n├─────────────────────────────────────────────────────────────\n│ Set up a regional external passthrough Network Load Balancer...\n├─────────────────────────────────────────────────────────────\n│ ⚡ **Actions:**\n│ • `[⚡ Load Article Context: gcp-rel-123]` -&gt; Deep ground this article\n│ • `[🔗 Source URL]` -&gt; https://docs.cloud.google.com/release-notes\n└─────────────────────────────────────────────────────────────\n&#34;</span>
+</span></span><span style="display:flex;"><span>      },
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;resource&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;resource&#34;</span>: {
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">&#34;uri&#34;</span>: <span style="color:#e6db74">&#34;brief://a2ui/articles/list&#34;</span>,
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">&#34;mimeType&#34;</span>: <span style="color:#e6db74">&#34;application/a2ui+json&#34;</span>,
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">&#34;text&#34;</span>: <span style="color:#e6db74">&#34;[{\&#34;id\&#34;:\&#34;gcp-rel-123\&#34;,\&#34;type\&#34;:\&#34;article_card\&#34;,\&#34;title\&#34;:\&#34;Google Cloud Release...\&#34;,\&#34;category\&#34;:\&#34;cloud\&#34;,\&#34;badge\&#34;:\&#34;☁️ Google Cloud &amp; Compute\&#34;,\&#34;content\&#34;:\&#34;Set up a regional...\&#34;,\&#34;actions\&#34;:[{\&#34;label\&#34;:\&#34;⚡ Load Article Context\&#34;,\&#34;action_type\&#34;:\&#34;load_context\&#34;,\&#34;payload\&#34;:{\&#34;article_id\&#34;:\&#34;gcp-rel-123\&#34;}}]}]&#34;</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr>
+<h2 id="supported-tools">
+  Supported Tools
+  <a class="anchor" href="#supported-tools">#</a>
+</h2>
+<h3 id="1-list_articles">
+  1. <code>list_articles</code>
+  <a class="anchor" href="#1-list_articles">#</a>
+</h3>
+<p>Lists indexed AI, Cloud, and LLM news items with A2UI formatted cards and structured A2UI JSON components.</p>
+<p><strong>Arguments:</strong></p>
+<ul>
+<li><code>category</code> <em>(string, optional)</em>: Filter by stream (<code>&quot;Frontier Models&quot;</code>, <code>&quot;Google Cloud&quot;</code>, <code>&quot;Research Papers&quot;</code>, <code>&quot;AI Business&quot;</code>, <code>&quot;OSS Tooling&quot;</code>).</li>
+<li><code>company</code> <em>(string, optional)</em>: Filter by company (<code>&quot;Google&quot;</code>, <code>&quot;Anthropic&quot;</code>, <code>&quot;OpenAI&quot;</code>, <code>&quot;Meta&quot;</code>).</li>
+<li><code>query</code> <em>(string, optional)</em>: Keyword search query across title and summary.</li>
+<li><code>limit</code> <em>(integer, optional)</em>: Maximum articles to return (default: <code>10</code>, max: <code>50</code>).</li>
+</ul>
+<hr>
+<h3 id="2-get_article_context">
+  2. <code>get_article_context</code>
+  <a class="anchor" href="#2-get_article_context">#</a>
+</h3>
+<p>Deep-fetches and extracts sanitized live article body text for complete factual grounding, returning both reading card and <code>application/a2ui+json</code> grounding inspector card.</p>
+<p><strong>Arguments:</strong></p>
+<ul>
+<li><code>article_id</code> <em>(string, optional)</em>: Database ID of the article to inspect.</li>
+<li><code>url</code> <em>(string, optional)</em>: Direct external URL to fetch and ground if article ID is not known.</li>
+</ul>
+<hr>
+<h3 id="3-generate_tldr">
+  3. <code>generate_tldr</code>
+  <a class="anchor" href="#3-generate_tldr">#</a>
+</h3>
+<p>Synthesizes today&rsquo;s executive strategic intelligence brief across all 5 streams using Vertex AI ADC or Gemini 3.7 Flash and returns an interactive <code>application/a2ui+json</code> strategic card.</p>
+<hr>
+<h3 id="4-trigger_crawl">
+  4. <code>trigger_crawl</code>
+  <a class="anchor" href="#4-trigger_crawl">#</a>
+</h3>
+<p>Executes an immediate live crawl of RSS feeds, arXiv preprints, HuggingFace releases, and Google Cloud release notes.</p>
+<hr>
+<h3 id="5-get_newsletter">
+  5. <code>get_newsletter</code>
+  <a class="anchor" href="#5-get_newsletter">#</a>
+</h3>
+<p>Retrieves today&rsquo;s compiled executive intelligence newsletter with both HTML (<code>text/html</code>), Markdown (<code>text/markdown</code>), and <code>application/a2ui+json</code> card components.</p>
+<hr>
+<h3 id="6-agent_chat">
+  6. <code>agent_chat</code>
+  <a class="anchor" href="#6-agent_chat">#</a>
+</h3>
+<p>Conducts conversational research grounded against the daily digest or a specific article.</p>
+<p><strong>Arguments:</strong></p>
+<ul>
+<li><code>message</code> <em>(string, required)</em>: User question or research prompt.</li>
+<li><code>session_id</code> <em>(string, optional)</em>: Session tracking ID for multi-turn conversations.</li>
+<li><code>article_id</code> <em>(string, optional)</em>: Specific article ID to ground against.</li>
+</ul>
+<hr>
+<h3 id="7-get_system_status">
+  7. <code>get_system_status</code>
+  <a class="anchor" href="#7-get_system_status">#</a>
+</h3>
+<p>Inspects database row counts, active Gemini/Vertex model, and authentication mode with a telemetry card.</p>
+<hr>
+<h2 id="mcp-resources">
+  MCP Resources
+  <a class="anchor" href="#mcp-resources">#</a>
+</h2>
+<table>
+	<thead>
+			<tr>
+					<th style="text-align: left">Resource URI</th>
+					<th style="text-align: left">MIME Type</th>
+					<th style="text-align: left">Description</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td style="text-align: left"><code>brief://today/newsletter</code></td>
+					<td style="text-align: left"><code>text/markdown</code></td>
+					<td style="text-align: left">Today&rsquo;s complete curated daily briefing</td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>brief://today/a2ui</code></td>
+					<td style="text-align: left"><code>application/a2ui+json</code></td>
+					<td style="text-align: left">Today&rsquo;s structured visual card deck</td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>brief://today/tldr</code></td>
+					<td style="text-align: left"><code>text/markdown</code></td>
+					<td style="text-align: left">Executive Strategic TL;DR briefing</td>
+			</tr>
+	</tbody>
+</table>
+<hr>
+<h2 id="invocation--transports">
+  Invocation &amp; Transports
+  <a class="anchor" href="#invocation--transports">#</a>
+</h2>
+<h3 id="direct-json-rpc-post-mcp">
+  Direct JSON-RPC (<code>POST /mcp</code>)
+  <a class="anchor" href="#direct-json-rpc-post-mcp">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -X POST http://localhost:8080/mcp <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -d <span style="color:#e6db74">&#39;{
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;jsonrpc&#34;: &#34;2.0&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;id&#34;: 1,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;method&#34;: &#34;tools/call&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;params&#34;: {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      &#34;name&#34;: &#34;list_articles&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      &#34;arguments&#34;: { &#34;limit&#34;: 3 }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  }&#39;</span>
+</span></span></code></pre></div><h3 id="remote-invocation-on-cloud-run-authenticated">
+  Remote Invocation on Cloud Run (Authenticated)
+  <a class="anchor" href="#remote-invocation-on-cloud-run-authenticated">#</a>
+</h3>
+<p>When invoking a deployed Cloud Run service with IAM authentication enforced:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>ENDPOINT<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;https://ai-daily-brief-mcp-dev-</span><span style="color:#e6db74">${</span>PROJECT_NUMBER<span style="color:#e6db74">}</span><span style="color:#e6db74">.us-central1.run.app&#34;</span>
+</span></span><span style="display:flex;"><span>ACCESS_TOKEN<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>gcloud auth print-access-token<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Generate an audience-bound ID token</span>
+</span></span><span style="display:flex;"><span>TOKEN<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>curl -s -X POST <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Authorization: Bearer </span>$ACCESS_TOKEN<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -d <span style="color:#e6db74">&#34;{\&#34;audience\&#34;: \&#34;</span><span style="color:#e6db74">${</span>ENDPOINT<span style="color:#e6db74">}</span><span style="color:#e6db74">\&#34;, \&#34;includeEmail\&#34;: true}&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/ai-daily-brief-sa-dev@</span><span style="color:#e6db74">${</span>PROJECT_ID<span style="color:#e6db74">}</span><span style="color:#e6db74">.iam.gserviceaccount.com:generateIdToken&#34;</span> | jq -r .token<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Call tool</span>
+</span></span><span style="display:flex;"><span>curl -s -X POST -H <span style="color:#e6db74">&#34;Authorization: Bearer </span>$TOKEN<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -d <span style="color:#e6db74">&#39;{&#34;jsonrpc&#34;: &#34;2.0&#34;, &#34;method&#34;: &#34;tools/call&#34;, &#34;params&#34;: {&#34;name&#34;: &#34;list_articles&#34;, &#34;arguments&#34;: {&#34;limit&#34;: 2}}, &#34;id&#34;: 1}&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>ENDPOINT<span style="color:#e6db74">}</span><span style="color:#e6db74">/mcp&#34;</span> | jq .
+</span></span></code></pre></div><h3 id="server-sent-events-get-sse--post-message">
+  Server-Sent Events (<code>GET /sse</code> &amp; <code>POST /message</code>)
+  <a class="anchor" href="#server-sent-events-get-sse--post-message">#</a>
+</h3>
+<p>Standard streaming protocol for desktop agent integrations (Antigravity, Claude Desktop, Cursor).</p>
+<hr>
+<h3 id="gemini-enterprise--discovery-engine-integration">
+  Gemini Enterprise &amp; Discovery Engine Integration
+  <a class="anchor" href="#gemini-enterprise--discovery-engine-integration">#</a>
+</h3>
+<p>To connect this MCP server directly to Google Gemini Enterprise or Discovery Engine as a managed tool connector with IAM service account authentication, refer to the <a href="/docs/gemini_enterprise/">Gemini Enterprise Integration Guide</a>.</p>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/docs/mcp-server.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#content-block-format-gemini-enterprise-ready">Content Block Format (Gemini Enterprise Ready)</a></li>
+    <li><a href="#supported-tools">Supported Tools</a>
+      <ul>
+        <li><a href="#1-list_articles">1. <code>list_articles</code></a></li>
+        <li><a href="#2-get_article_context">2. <code>get_article_context</code></a></li>
+        <li><a href="#3-generate_tldr">3. <code>generate_tldr</code></a></li>
+        <li><a href="#4-trigger_crawl">4. <code>trigger_crawl</code></a></li>
+        <li><a href="#5-get_newsletter">5. <code>get_newsletter</code></a></li>
+        <li><a href="#6-agent_chat">6. <code>agent_chat</code></a></li>
+        <li><a href="#7-get_system_status">7. <code>get_system_status</code></a></li>
+      </ul>
+    </li>
+    <li><a href="#mcp-resources">MCP Resources</a></li>
+    <li><a href="#invocation--transports">Invocation &amp; Transports</a>
+      <ul>
+        <li><a href="#direct-json-rpc-post-mcp">Direct JSON-RPC (<code>POST /mcp</code>)</a></li>
+        <li><a href="#remote-invocation-on-cloud-run-authenticated">Remote Invocation on Cloud Run (Authenticated)</a></li>
+        <li><a href="#server-sent-events-get-sse--post-message">Server-Sent Events (<code>GET /sse</code> &amp; <code>POST /message</code>)</a></li>
+        <li><a href="#gemini-enterprise--discovery-engine-integration">Gemini Enterprise &amp; Discovery Engine Integration</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

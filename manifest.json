@@ -1,0 +1,15 @@
+{
+  "name": "AI Daily Brief",
+  "short_name": "AI Daily Brief",
+  "start_url": "/ai-daily-brief/",
+  "scope": "/ai-daily-brief/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/ai-daily-brief/favicon.svg",
+      "sizes": "512x512"
+    }
+  ]
+}

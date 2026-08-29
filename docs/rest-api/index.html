@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  📡 REST API Reference
+  #
+
+In addition to the Model Context Protocol (MCP), AI Daily Brief exposes a complete REST API.
+
+
+  Endpoints
+  #
+
+
+  1. GET /healthz
+  #
+
+Cloud Run health and readiness check probe.
+
+Response: 200 OK
+
+{
+  &#34;protocol&#34;: &#34;model-context-protocol-2024-11-05&#34;,
+  &#34;server&#34;: &#34;ai-daily-brief-mcp&#34;,
+  &#34;status&#34;: &#34;healthy&#34;,
+  &#34;timestamp&#34;: &#34;2026-02-25T20:00:00Z&#34;
+}
+
+
+  2. GET /api/items
+  #
+
+Query indexed intelligence records.
+
+Parameters: search, company, category, limit
+Response:
+
+{
+  &#34;count&#34;: 10,
+  &#34;items&#34;: [ ... ],
+  &#34;success&#34;: true
+}
+
+
+  3. POST /api/batch/run
+  #
+
+Trigger an immediate parallel crawl across all 5 streams.">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/docs/rest-api/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="REST API Reference">
+	<meta property="og:description" content="📡 REST API Reference # In addition to the Model Context Protocol (MCP), AI Daily Brief exposes a complete REST API.
+Endpoints # 1. GET /healthz # Cloud Run health and readiness check probe.
+Response: 200 OK { &#34;protocol&#34;: &#34;model-context-protocol-2024-11-05&#34;, &#34;server&#34;: &#34;ai-daily-brief-mcp&#34;, &#34;status&#34;: &#34;healthy&#34;, &#34;timestamp&#34;: &#34;2026-02-25T20:00:00Z&#34; } 2. GET /api/items # Query indexed intelligence records.
+Parameters: search, company, category, limit Response: { &#34;count&#34;: 10, &#34;items&#34;: [ ... ], &#34;success&#34;: true } 3. POST /api/batch/run # Trigger an immediate parallel crawl across all 5 streams.">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="docs">
+<title>REST API Reference | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/docs/rest-api/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="active">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>REST API Reference</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#endpoints">Endpoints</a>
+      <ul>
+        <li><a href="#1-get-healthz">1. <code>GET /healthz</code></a></li>
+        <li><a href="#2-get-apiitems">2. <code>GET /api/items</code></a></li>
+        <li><a href="#3-post-apibatchrun">3. <code>POST /api/batch/run</code></a></li>
+        <li><a href="#4-post-apiagentchat">4. <code>POST /api/agent/chat</code></a></li>
+        <li><a href="#5-get-wslive">5. <code>GET /ws/live</code></a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-rest-api-reference">
+  📡 REST API Reference
+  <a class="anchor" href="#-rest-api-reference">#</a>
+</h1>
+<p>In addition to the Model Context Protocol (MCP), AI Daily Brief exposes a complete REST API.</p>
+<hr>
+<h2 id="endpoints">
+  Endpoints
+  <a class="anchor" href="#endpoints">#</a>
+</h2>
+<h3 id="1-get-healthz">
+  1. <code>GET /healthz</code>
+  <a class="anchor" href="#1-get-healthz">#</a>
+</h3>
+<p>Cloud Run health and readiness check probe.</p>
+<ul>
+<li><strong>Response</strong>: <code>200 OK</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;protocol&#34;</span>: <span style="color:#e6db74">&#34;model-context-protocol-2024-11-05&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;server&#34;</span>: <span style="color:#e6db74">&#34;ai-daily-brief-mcp&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;status&#34;</span>: <span style="color:#e6db74">&#34;healthy&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;timestamp&#34;</span>: <span style="color:#e6db74">&#34;2026-02-25T20:00:00Z&#34;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr>
+<h3 id="2-get-apiitems">
+  2. <code>GET /api/items</code>
+  <a class="anchor" href="#2-get-apiitems">#</a>
+</h3>
+<p>Query indexed intelligence records.</p>
+<ul>
+<li><strong>Parameters</strong>: <code>search</code>, <code>company</code>, <code>category</code>, <code>limit</code></li>
+<li><strong>Response</strong>:</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;count&#34;</span>: <span style="color:#ae81ff">10</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;items&#34;</span>: [ <span style="color:#960050;background-color:#1e0010">...</span> ],
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;success&#34;</span>: <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr>
+<h3 id="3-post-apibatchrun">
+  3. <code>POST /api/batch/run</code>
+  <a class="anchor" href="#3-post-apibatchrun">#</a>
+</h3>
+<p>Trigger an immediate parallel crawl across all 5 streams.</p>
+<ul>
+<li><strong>Response</strong>:</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;result&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;items_inserted&#34;</span>: <span style="color:#ae81ff">12</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;status&#34;</span>: <span style="color:#e6db74">&#34;SUCCESS&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;total_in_db&#34;</span>: <span style="color:#ae81ff">340</span>
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;success&#34;</span>: <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr>
+<h3 id="4-post-apiagentchat">
+  4. <code>POST /api/agent/chat</code>
+  <a class="anchor" href="#4-post-apiagentchat">#</a>
+</h3>
+<p>Interactive context-grounded conversational agent.</p>
+<ul>
+<li><strong>Body</strong>:</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;message&#34;</span>: <span style="color:#e6db74">&#34;What are the latest TPU v5e benchmark results?&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;session_id&#34;</span>: <span style="color:#e6db74">&#34;sess_12345&#34;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr>
+<h3 id="5-get-wslive">
+  5. <code>GET /ws/live</code>
+  <a class="anchor" href="#5-get-wslive">#</a>
+</h3>
+<p>Multimodal Live Bidi WebSocket endpoint for low-latency conversational audio research.</p>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/docs/rest-api.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#endpoints">Endpoints</a>
+      <ul>
+        <li><a href="#1-get-healthz">1. <code>GET /healthz</code></a></li>
+        <li><a href="#2-get-apiitems">2. <code>GET /api/items</code></a></li>
+        <li><a href="#3-post-apibatchrun">3. <code>POST /api/batch/run</code></a></li>
+        <li><a href="#4-post-apiagentchat">4. <code>POST /api/agent/chat</code></a></li>
+        <li><a href="#5-get-wslive">5. <code>GET /ws/live</code></a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

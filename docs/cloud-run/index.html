@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  ☁️ Google Cloud Run Deployment
+  #
+
+AI Daily Brief provides standalone, multi-stage container configurations and Terraform stacks for both the MCP Server and the A2A Agent.
+
+
+  1. Directory Structure
+  #
+
+deployments/
+├── agent/                         # A2A Agent Service Deployment
+│   ├── Dockerfile
+│   ├── cloudbuild.yaml
+│   ├── deploy.sh
+│   └── terraform/                 # Agent Cloud Run &#43; Vertex AI IAM
+│       ├── main.tf
+│       ├── variables.tf
+│       ├── outputs.tf
+│       └── environments/
+│           ├── dev.tfvars
+│           └── prod.tfvars
+└── mcp/                           # MCP Server Service Deployment
+    ├── Dockerfile
+    ├── cloudbuild.yaml
+    ├── deploy.sh
+    └── terraform/                 # MCP Cloud Run &#43; AlloyDB &#43; VPC &#43; Secret Manager
+        ├── main.tf
+        ├── variables.tf
+        ├── outputs.tf
+        └── environments/
+            ├── dev.tfvars
+            └── prod.tfvars
+
+
+  2. Container Building via Bazel
+  #
+
+Compile Linux ARM64 or AMD64 container binaries directly using Bazel:">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/docs/cloud-run/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="Cloud Run Deployment">
+	<meta property="og:description" content="☁️ Google Cloud Run Deployment # AI Daily Brief provides standalone, multi-stage container configurations and Terraform stacks for both the MCP Server and the A2A Agent.
+1. Directory Structure # deployments/ ├── agent/ # A2A Agent Service Deployment │ ├── Dockerfile │ ├── cloudbuild.yaml │ ├── deploy.sh │ └── terraform/ # Agent Cloud Run &#43; Vertex AI IAM │ ├── main.tf │ ├── variables.tf │ ├── outputs.tf │ └── environments/ │ ├── dev.tfvars │ └── prod.tfvars └── mcp/ # MCP Server Service Deployment ├── Dockerfile ├── cloudbuild.yaml ├── deploy.sh └── terraform/ # MCP Cloud Run &#43; AlloyDB &#43; VPC &#43; Secret Manager ├── main.tf ├── variables.tf ├── outputs.tf └── environments/ ├── dev.tfvars └── prod.tfvars 2. Container Building via Bazel # Compile Linux ARM64 or AMD64 container binaries directly using Bazel:">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="docs">
+<title>Cloud Run Deployment | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/docs/cloud-run/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="active">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Cloud Run Deployment</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-directory-structure">1. Directory Structure</a></li>
+    <li><a href="#2-container-building-via-bazel">2. Container Building via Bazel</a></li>
+    <li><a href="#3-deploying-the-mcp-server">3. Deploying the MCP Server</a>
+      <ul>
+        <li><a href="#via-deployment-script">Via Deployment Script:</a></li>
+        <li><a href="#via-terraform">Via Terraform:</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-deploying-the-a2a-agent">4. Deploying the A2A Agent</a>
+      <ul>
+        <li><a href="#via-deployment-script-1">Via Deployment Script:</a></li>
+        <li><a href="#via-terraform-1">Via Terraform:</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-container-probes--ingress">5. Container Probes &amp; Ingress</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-google-cloud-run-deployment">
+  ☁️ Google Cloud Run Deployment
+  <a class="anchor" href="#-google-cloud-run-deployment">#</a>
+</h1>
+<p>AI Daily Brief provides standalone, multi-stage container configurations and Terraform stacks for both the <strong>MCP Server</strong> and the <strong>A2A Agent</strong>.</p>
+<hr>
+<h2 id="1-directory-structure">
+  1. Directory Structure
+  <a class="anchor" href="#1-directory-structure">#</a>
+</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>deployments/
+</span></span><span style="display:flex;"><span>├── agent/                         # A2A Agent Service Deployment
+</span></span><span style="display:flex;"><span>│   ├── Dockerfile
+</span></span><span style="display:flex;"><span>│   ├── cloudbuild.yaml
+</span></span><span style="display:flex;"><span>│   ├── deploy.sh
+</span></span><span style="display:flex;"><span>│   └── terraform/                 # Agent Cloud Run + Vertex AI IAM
+</span></span><span style="display:flex;"><span>│       ├── main.tf
+</span></span><span style="display:flex;"><span>│       ├── variables.tf
+</span></span><span style="display:flex;"><span>│       ├── outputs.tf
+</span></span><span style="display:flex;"><span>│       └── environments/
+</span></span><span style="display:flex;"><span>│           ├── dev.tfvars
+</span></span><span style="display:flex;"><span>│           └── prod.tfvars
+</span></span><span style="display:flex;"><span>└── mcp/                           # MCP Server Service Deployment
+</span></span><span style="display:flex;"><span>    ├── Dockerfile
+</span></span><span style="display:flex;"><span>    ├── cloudbuild.yaml
+</span></span><span style="display:flex;"><span>    ├── deploy.sh
+</span></span><span style="display:flex;"><span>    └── terraform/                 # MCP Cloud Run + AlloyDB + VPC + Secret Manager
+</span></span><span style="display:flex;"><span>        ├── main.tf
+</span></span><span style="display:flex;"><span>        ├── variables.tf
+</span></span><span style="display:flex;"><span>        ├── outputs.tf
+</span></span><span style="display:flex;"><span>        └── environments/
+</span></span><span style="display:flex;"><span>            ├── dev.tfvars
+</span></span><span style="display:flex;"><span>            └── prod.tfvars
+</span></span></code></pre></div><hr>
+<h2 id="2-container-building-via-bazel">
+  2. Container Building via Bazel
+  <a class="anchor" href="#2-container-building-via-bazel">#</a>
+</h2>
+<p>Compile Linux ARM64 or AMD64 container binaries directly using Bazel:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Build Linux AMD64 Cloud Run binaries</span>
+</span></span><span style="display:flex;"><span>bazel build //cmd/mcp-server:mcp_server_linux_amd64
+</span></span><span style="display:flex;"><span>bazel build //cmd/a2a-agent:a2a_agent_linux_amd64
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Build Linux ARM64 Cloud Run binaries</span>
+</span></span><span style="display:flex;"><span>bazel build //cmd/mcp-server:mcp_server_linux_arm64
+</span></span><span style="display:flex;"><span>bazel build //cmd/a2a-agent:a2a_agent_linux_arm64
+</span></span></code></pre></div><hr>
+<h2 id="3-deploying-the-mcp-server">
+  3. Deploying the MCP Server
+  <a class="anchor" href="#3-deploying-the-mcp-server">#</a>
+</h2>
+<h3 id="via-deployment-script">
+  Via Deployment Script:
+  <a class="anchor" href="#via-deployment-script">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./deployments/mcp/deploy.sh
+</span></span></code></pre></div><h3 id="via-terraform">
+  Via Terraform:
+  <a class="anchor" href="#via-terraform">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cd deployments/mcp/terraform
+</span></span><span style="display:flex;"><span>terraform init
+</span></span><span style="display:flex;"><span>terraform apply -var-file<span style="color:#f92672">=</span>environments/dev.tfvars
+</span></span></code></pre></div><hr>
+<h2 id="4-deploying-the-a2a-agent">
+  4. Deploying the A2A Agent
+  <a class="anchor" href="#4-deploying-the-a2a-agent">#</a>
+</h2>
+<h3 id="via-deployment-script-1">
+  Via Deployment Script:
+  <a class="anchor" href="#via-deployment-script-1">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./deployments/agent/deploy.sh
+</span></span></code></pre></div><h3 id="via-terraform-1">
+  Via Terraform:
+  <a class="anchor" href="#via-terraform-1">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>cd deployments/agent/terraform
+</span></span><span style="display:flex;"><span>terraform init
+</span></span><span style="display:flex;"><span>terraform apply -var-file<span style="color:#f92672">=</span>environments/dev.tfvars
+</span></span></code></pre></div><hr>
+<h2 id="5-container-probes--ingress">
+  5. Container Probes &amp; Ingress
+  <a class="anchor" href="#5-container-probes--ingress">#</a>
+</h2>
+<ul>
+<li><strong>MCP Server Probes</strong>: Startup probe on TCP <code>:8080</code>, Liveness on HTTP <code>/healthz</code>.</li>
+<li><strong>A2A Agent Probes</strong>: Startup probe on TCP <code>:8080</code>, Liveness on HTTP <code>/healthz</code>.</li>
+<li><strong>Service-to-Service Auth</strong>: The Agent authenticates to the MCP server using its dedicated Cloud Run service account (<code>ai-daily-brief-agent-sa-${env}</code>) bound to <code>roles/run.invoker</code>.</li>
+</ul>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/docs/cloud-run.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-directory-structure">1. Directory Structure</a></li>
+    <li><a href="#2-container-building-via-bazel">2. Container Building via Bazel</a></li>
+    <li><a href="#3-deploying-the-mcp-server">3. Deploying the MCP Server</a>
+      <ul>
+        <li><a href="#via-deployment-script">Via Deployment Script:</a></li>
+        <li><a href="#via-terraform">Via Terraform:</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-deploying-the-a2a-agent">4. Deploying the A2A Agent</a>
+      <ul>
+        <li><a href="#via-deployment-script-1">Via Deployment Script:</a></li>
+        <li><a href="#via-terraform-1">Via Terraform:</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-container-probes--ingress">5. Container Probes &amp; Ingress</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

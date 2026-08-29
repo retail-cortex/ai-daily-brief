@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+	<meta name="generator" content="Hugo 0.162.0">
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  ⚡ AI Daily Brief
+  #
+
+
+Cloud-Native Model Context Protocol (MCP) &amp; REST Control Plane Server powered by Go, Gin, GORM, Google Cloud AlloyDB for PostgreSQL, and Google Vertex AI.
+
+
+
+  🎯 What is AI Daily Brief?
+  #
+
+AI Daily Brief is an enterprise-grade agentic control plane and intelligence aggregation engine designed to run as a Google Cloud Run service. It continuously indexes, dedup Lion-hashes, and synthesizes 5 core streams of artificial intelligence and cloud computing developments:">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="AI Daily Brief Documentation">
+	<meta property="og:description" content="⚡ AI Daily Brief # Cloud-Native Model Context Protocol (MCP) &amp; REST Control Plane Server powered by Go, Gin, GORM, Google Cloud AlloyDB for PostgreSQL, and Google Vertex AI.
+🎯 What is AI Daily Brief? # AI Daily Brief is an enterprise-grade agentic control plane and intelligence aggregation engine designed to run as a Google Cloud Run service. It continuously indexes, dedup Lion-hashes, and synthesizes 5 core streams of artificial intelligence and cloud computing developments:">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="website">
+<title>AI Daily Brief Documentation | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<link rel="alternate" type="application/rss+xml" href="https://retail-cortex.github.io/ai-daily-brief/index.xml" title="AI Daily Brief" />
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>AI Daily Brief Documentation</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#-what-is-ai-daily-brief">🎯 What is AI Daily Brief?</a></li>
+    <li><a href="#-core-architecture-at-a-glance">🏗️ Core Architecture at a Glance</a></li>
+    <li><a href="#-documentation-sections">📚 Documentation Sections</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-ai-daily-brief">
+  ⚡ AI Daily Brief
+  <a class="anchor" href="#-ai-daily-brief">#</a>
+</h1>
+<blockquote>
+<p><strong>Cloud-Native Model Context Protocol (MCP) &amp; REST Control Plane Server</strong> powered by Go, Gin, GORM, Google Cloud AlloyDB for PostgreSQL, and Google Vertex AI.</p>
+</blockquote>
+<hr>
+<h2 id="-what-is-ai-daily-brief">
+  🎯 What is AI Daily Brief?
+  <a class="anchor" href="#-what-is-ai-daily-brief">#</a>
+</h2>
+<p><strong>AI Daily Brief</strong> is an enterprise-grade agentic control plane and intelligence aggregation engine designed to run as a <strong>Google Cloud Run</strong> service. It continuously indexes, dedup Lion-hashes, and synthesizes 5 core streams of artificial intelligence and cloud computing developments:</p>
+<ol>
+<li>🔵 <strong>Frontier Models</strong>: Google (Gemini 3.7 / 2.5), Anthropic (Claude), OpenAI (GPT-5 / o3 / Sora), X AI (Grok), Meta AI.</li>
+<li>☁️ <strong>Google Cloud &amp; Compute</strong>: Official release notes, Vertex AI managed infrastructure, AI Hypercomputer, TPUs, GKE.</li>
+<li>🟣 <strong>AI Research Papers</strong>: Multi-category arXiv API (<code>cs.CL</code>, <code>cs.AI</code>, <code>cs.CV</code>, <code>cs.LG</code>), Hugging Face Daily Papers, and academic benchmarks.</li>
+<li>🟢 <strong>AI Business &amp; Infrastructure</strong>: Venture capital funding rounds, hyperscale datacenter buildouts, hardware supply chains.</li>
+<li>🟠 <strong>Open-Source &amp; Tooling</strong>: Open weights (DeepSeek, Llama, Qwen, Mistral), local inference runtimes (vLLM, Ollama), fine-tuning harnesses.</li>
+</ol>
+<hr>
+<h2 id="-core-architecture-at-a-glance">
+  🏗️ Core Architecture at a Glance
+  <a class="anchor" href="#-core-architecture-at-a-glance">#</a>
+</h2>
+<pre tabindex="0"><code>┌────────────────────────────────────────────────────────────────────────┐
+│                        CALLERS &amp; CONSUMERS                             │
+│   Vertex AI Agent Engine  •  Cloud Run Agents  •  Desktop IDEs         │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / SSE / JSON-RPC
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                  AI DAILY BRIEF (cmd/mcp-server)                       │
+│                                                                        │
+│   ┌─────────────────────┐  ┌─────────────────────┐  ┌──────────────┐   │
+│   │ MCP Protocol Engine │  │ A2UI Card Formatter │  │ REST API     │   │
+│   │ POST /mcp, GET /sse │  │ Interactive Cards   │  │ /api/items   │   │
+│   └──────────┬──────────┘  └──────────┬──────────┘  └───────┬──────┘   │
+│              └────────────────────────┼─────────────────────┘          │
+│                                       ▼                                │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │                   CORE INTELLIGENCE ENGINE                     │   │
+│   │   • Parallel Goroutine Crawlers (&lt;1s execution)                │   │
+│   │   • Vertex AI ADC Client (Gemini 3.7 Flash)                    │   │
+│   │   • SHA-256 Deduplication &amp; Content Sanitization              │   │
+│   └───────────────────────────────────┬────────────────────────────┘   │
+└───────────────────────────────────────┼────────────────────────────────┘
+                                        │
+                         ┌──────────────┴──────────────┐
+                         ▼                             ▼
+        ┌────────────────────────────────┐    ┌─────────────────┐
+        │ Google Cloud AlloyDB / Postgres│    │ Vertex AI ADC   │
+        │ Connection Pool (Max 25 conns) │    │ Gemini Models   │
+        └────────────────────────────────┘    └─────────────────┘
+</code></pre><hr>
+<h2 id="-documentation-sections">
+  📚 Documentation Sections
+  <a class="anchor" href="#-documentation-sections">#</a>
+</h2>
+<p>Explore the comprehensive guides below:</p>
+<ul>
+<li><strong><a href="/docs/getting-started/">Getting Started</a></strong>: Quickstart, running locally with Bazel, and environment profile configuration.</li>
+<li><strong><a href="/docs/architecture/">Architecture</a></strong>: In-depth design of the parallel crawler engine, hashing deduplication, and control plane.</li>
+<li><strong><a href="/docs/mcp-server/">Model Context Protocol (MCP)</a></strong>: Complete tool definitions, JSON Schema specifications, and <strong>A2UI</strong> interactive card outputs.</li>
+<li><strong><a href="/docs/cloud-run/">Cloud Run Deployment</a></strong>: Building container images, configuring Cloud Run probes, and IAM service-to-service security.</li>
+<li><strong><a href="/docs/alloydb/">Google Cloud AlloyDB</a></strong>: Setting up AlloyDB for PostgreSQL, connection pooling, and profile management (<code>.env.test.toml</code> vs <code>.env.integration.toml</code>).</li>
+<li><strong><a href="/docs/a2a-agent/">Agent-to-Agent (A2A) Service</a></strong>: Autonomous Cloud Run agent service consuming the MCP control plane with Google ADK / Gemini workflows.</li>
+<li><strong><a href="/docs/gemini_enterprise/">Gemini Enterprise Integration</a></strong>: Complete guide for registering the A2A Agent &amp; MCP Server into Gemini Enterprise / Discovery Engine Agent Registry.</li>
+<li><strong><a href="/docs/rest-api/">REST API Reference</a></strong>: Complete endpoint reference for items, crawls, settings, and multimodal live streaming.</li>
+<li><strong><a href="/docs/troubleshooting/">Troubleshooting Guide</a></strong>: Comprehensive debugging workflows, AlloyDB auth proxy local tunnels, and IAM troubleshooting.</li>
+</ul>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/_index.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#-what-is-ai-daily-brief">🎯 What is AI Daily Brief?</a></li>
+    <li><a href="#-core-architecture-at-a-glance">🏗️ Core Architecture at a Glance</a></li>
+    <li><a href="#-documentation-sections">📚 Documentation Sections</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

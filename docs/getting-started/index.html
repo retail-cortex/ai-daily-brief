@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  🚀 Getting Started
+  #
+
+This guide walks you through configuring, compiling, and running the AI Daily Brief stack locally using Bazel, modenv profile management, and Terraform infrastructure variable definitions.
+
+
+  📋 Prerequisites
+  #
+
+Before running the application, ensure the following tools are installed:
+
+Bazel / Bazelisk: Hermetic build toolchain (brew install bazelisk)
+Python Package Manager (uv): For running the interactive A2A test harness (brew install uv or curl -LsSf https://astral.sh/uv/install.sh | sh)
+Google Cloud SDK (gcloud): Required for Vertex AI Application Default Credentials (ADC):
+# Authenticate local credentials for Vertex AI Gemini models
+gcloud auth application-default login
+
+# Set default active project
+gcloud config set project YOUR_GCP_PROJECT_ID
+
+
+
+
+  ⚙️ Step 1: Application Configuration (.env.toml)
+  #
+
+AI Daily Brief utilizes modenv for hierarchical configuration and profile resolution across both the MCP Server (configs/mcp/) and the A2A Agent (configs/agent/).">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/docs/getting-started/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="Getting Started">
+	<meta property="og:description" content="🚀 Getting Started # This guide walks you through configuring, compiling, and running the AI Daily Brief stack locally using Bazel, modenv profile management, and Terraform infrastructure variable definitions.
+📋 Prerequisites # Before running the application, ensure the following tools are installed:
+Bazel / Bazelisk: Hermetic build toolchain (brew install bazelisk) Python Package Manager (uv): For running the interactive A2A test harness (brew install uv or curl -LsSf https://astral.sh/uv/install.sh | sh) Google Cloud SDK (gcloud): Required for Vertex AI Application Default Credentials (ADC): # Authenticate local credentials for Vertex AI Gemini models gcloud auth application-default login # Set default active project gcloud config set project YOUR_GCP_PROJECT_ID ⚙️ Step 1: Application Configuration (.env.toml) # AI Daily Brief utilizes modenv for hierarchical configuration and profile resolution across both the MCP Server (configs/mcp/) and the A2A Agent (configs/agent/).">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="docs">
+<title>Getting Started | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/docs/getting-started/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="active">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Getting Started</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#-prerequisites">📋 Prerequisites</a></li>
+    <li><a href="#-step-1-application-configuration-envtoml">⚙️ Step 1: Application Configuration (<code>.env.toml</code>)</a>
+      <ul>
+        <li><a href="#configuration-precedence-order">Configuration Precedence Order</a></li>
+        <li><a href="#setting-up-local-environment-files">Setting Up Local Environment Files</a></li>
+        <li><a href="#configuration-structure-reference">Configuration Structure Reference</a>
+          <ul>
+            <li><a href="#mcp-server-configsmcpenvdevtoml">MCP Server (<code>configs/mcp/.env.dev.toml</code>)</a></li>
+            <li><a href="#a2a-agent-configsagentenvdevtoml">A2A Agent (<code>configs/agent/.env.dev.toml</code>)</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#-step-2-terraform-infrastructure-variables-tfvars">🌍 Step 2: Terraform Infrastructure Variables (<code>*.tfvars</code>)</a>
+      <ul>
+        <li><a href="#setting-up-environment-variables">Setting Up Environment Variables</a></li>
+        <li><a href="#key-terraform-variables-reference">Key Terraform Variables Reference</a></li>
+      </ul>
+    </li>
+    <li><a href="#-step-3-launching-the-local-stack">💻 Step 3: Launching the Local Stack</a>
+      <ul>
+        <li><a href="#parallel-multi-runner-recommended">Parallel Multi-Runner (Recommended)</a></li>
+        <li><a href="#running-individual-services">Running Individual Services</a></li>
+        <li><a href="#activating-specific-environment-profiles">Activating Specific Environment Profiles</a></li>
+      </ul>
+    </li>
+    <li><a href="#-step-4-verification--diagnostic-playground">🔍 Step 4: Verification &amp; Diagnostic Playground</a>
+      <ul>
+        <li><a href="#1-service-health-probes">1. Service Health Probes</a></li>
+        <li><a href="#2-interactive-web-test-harness">2. Interactive Web Test Harness</a></li>
+      </ul>
+    </li>
+    <li><a href="#-cli-flags-reference">🛠️ CLI Flags Reference</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-getting-started">
+  🚀 Getting Started
+  <a class="anchor" href="#-getting-started">#</a>
+</h1>
+<p>This guide walks you through configuring, compiling, and running the <strong>AI Daily Brief</strong> stack locally using Bazel, <code>modenv</code> profile management, and Terraform infrastructure variable definitions.</p>
+<hr>
+<h2 id="-prerequisites">
+  📋 Prerequisites
+  <a class="anchor" href="#-prerequisites">#</a>
+</h2>
+<p>Before running the application, ensure the following tools are installed:</p>
+<ul>
+<li><strong>Bazel / Bazelisk</strong>: Hermetic build toolchain (<code>brew install bazelisk</code>)</li>
+<li><strong>Python Package Manager (<code>uv</code>)</strong>: For running the interactive A2A test harness (<code>brew install uv</code> or <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>)</li>
+<li><strong>Google Cloud SDK (<code>gcloud</code>)</strong>: Required for Vertex AI Application Default Credentials (ADC):
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Authenticate local credentials for Vertex AI Gemini models</span>
+</span></span><span style="display:flex;"><span>gcloud auth application-default login
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Set default active project</span>
+</span></span><span style="display:flex;"><span>gcloud config set project YOUR_GCP_PROJECT_ID
+</span></span></code></pre></div></li>
+</ul>
+<hr>
+<h2 id="-step-1-application-configuration-envtoml">
+  ⚙️ Step 1: Application Configuration (<code>.env.toml</code>)
+  <a class="anchor" href="#-step-1-application-configuration-envtoml">#</a>
+</h2>
+<p>AI Daily Brief utilizes <strong><code>modenv</code></strong> for hierarchical configuration and profile resolution across both the <strong>MCP Server</strong> (<code>configs/mcp/</code>) and the <strong>A2A Agent</strong> (<code>configs/agent/</code>).</p>
+<h3 id="configuration-precedence-order">
+  Configuration Precedence Order
+  <a class="anchor" href="#configuration-precedence-order">#</a>
+</h3>
+<p>For any given environment profile (e.g. <code>dev</code>, <code>prod</code>, <code>integration</code>), <code>modenv</code> resolves settings in the following order (highest precedence first):</p>
+<ol>
+<li><code>configs/&lt;service&gt;/.env.&lt;profile&gt;.local.toml</code> <em>(Uncommitted local secrets/overrides)</em></li>
+<li><code>configs/&lt;service&gt;/.env.&lt;profile&gt;.toml</code> <em>(Environment-specific configuration)</em></li>
+<li><code>configs/&lt;service&gt;/.env.local.toml</code> <em>(Default local uncommitted overrides)</em></li>
+<li><code>configs/&lt;service&gt;/.env.toml</code> <em>(Default base configuration)</em></li>
+</ol>
+<h3 id="setting-up-local-environment-files">
+  Setting Up Local Environment Files
+  <a class="anchor" href="#setting-up-local-environment-files">#</a>
+</h3>
+<p>Create your local development configuration files by copying from the provided examples:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 1. Configure the MCP Server for development</span>
+</span></span><span style="display:flex;"><span>cp configs/mcp/example-dev.toml configs/mcp/.env.dev.toml
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 2. Configure the A2A Agent for development</span>
+</span></span><span style="display:flex;"><span>cp configs/agent/example-dev.toml configs/agent/.env.dev.toml
+</span></span></code></pre></div><h3 id="configuration-structure-reference">
+  Configuration Structure Reference
+  <a class="anchor" href="#configuration-structure-reference">#</a>
+</h3>
+<h4 id="mcp-server-configsmcpenvdevtoml">
+  MCP Server (<code>configs/mcp/.env.dev.toml</code>)
+  <a class="anchor" href="#mcp-server-configsmcpenvdevtoml">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-toml" data-lang="toml"><span style="display:flex;"><span>[<span style="color:#a6e22e">server</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">cron_schedule</span> = <span style="color:#e6db74">&#34;0 8 * * 1-5&#34;</span>      <span style="color:#75715e"># Daily brief scheduled crawl (Monday-Friday 8am)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[<span style="color:#a6e22e">database</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">dialect</span> = <span style="color:#e6db74">&#34;sqlite&#34;</span>                 <span style="color:#75715e"># &#34;sqlite&#34; for local dev, &#34;postgres&#34; for AlloyDB</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">database</span> = <span style="color:#e6db74">&#34;data/ai_daily_brief.db&#34;</span> <span style="color:#75715e"># Local file path or database name</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">require_ssl</span> = <span style="color:#66d9ef">false</span>                <span style="color:#75715e"># Set true when connecting to Cloud SQL / AlloyDB</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[<span style="color:#a6e22e">google_cloud</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">project_region</span> = <span style="color:#e6db74">&#34;us-central1&#34;</span>      <span style="color:#75715e"># Vertex AI inference region</span>
+</span></span></code></pre></div><h4 id="a2a-agent-configsagentenvdevtoml">
+  A2A Agent (<code>configs/agent/.env.dev.toml</code>)
+  <a class="anchor" href="#a2a-agent-configsagentenvdevtoml">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-toml" data-lang="toml"><span style="display:flex;"><span><span style="color:#a6e22e">agent_name</span> = <span style="color:#e6db74">&#34;ai-daily-brief-a2a-agent-dev&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[<span style="color:#a6e22e">google_cloud</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">project_id</span> = <span style="color:#e6db74">&#34;YOUR_GCP_DEV_PROJECT_ID&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">project_region</span> = <span style="color:#e6db74">&#34;us-central1&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[<span style="color:#a6e22e">mcp_servers</span>.<span style="color:#a6e22e">daily_brief</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">url</span> = <span style="color:#e6db74">&#34;http://localhost:8080&#34;</span>      <span style="color:#75715e"># Local MCP endpoint (or Cloud Run URL in staging/prod)</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">timeout_seconds</span> = <span style="color:#ae81ff">60</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[<span style="color:#a6e22e">gemini</span>.<span style="color:#a6e22e">default</span>]
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">model</span> = <span style="color:#e6db74">&#34;gemini-3.7-flash&#34;</span>         <span style="color:#75715e"># Gemini model family</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">region</span> = <span style="color:#e6db74">&#34;us-central1&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">auth_mode</span> = <span style="color:#e6db74">&#34;vertex_adc&#34;</span>           <span style="color:#75715e"># Vertex AI via Application Default Credentials</span>
+</span></span></code></pre></div><hr>
+<h2 id="-step-2-terraform-infrastructure-variables-tfvars">
+  🌍 Step 2: Terraform Infrastructure Variables (<code>*.tfvars</code>)
+  <a class="anchor" href="#-step-2-terraform-infrastructure-variables-tfvars">#</a>
+</h2>
+<p>When preparing deployments to <strong>Google Cloud Run</strong> and <strong>Google Cloud AlloyDB</strong>, each service has its own dedicated Terraform module under <code>deployments/</code>.</p>
+<h3 id="setting-up-environment-variables">
+  Setting Up Environment Variables
+  <a class="anchor" href="#setting-up-environment-variables">#</a>
+</h3>
+<p>Create <code>.tfvars</code> files from the provided templates:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 1. MCP Server Terraform Variables</span>
+</span></span><span style="display:flex;"><span>cp deployments/mcp/terraform/environments/dev.tfvars.example deployments/mcp/terraform/environments/dev.tfvars
+</span></span><span style="display:flex;"><span>cp deployments/mcp/terraform/environments/prod.tfvars.example deployments/mcp/terraform/environments/prod.tfvars
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 2. A2A Agent Terraform Variables</span>
+</span></span><span style="display:flex;"><span>cp deployments/agent/terraform/environments/dev.tfvars.example deployments/agent/terraform/environments/dev.tfvars
+</span></span><span style="display:flex;"><span>cp deployments/agent/terraform/environments/prod.tfvars.example deployments/agent/terraform/environments/prod.tfvars
+</span></span></code></pre></div><h3 id="key-terraform-variables-reference">
+  Key Terraform Variables Reference
+  <a class="anchor" href="#key-terraform-variables-reference">#</a>
+</h3>
+<table>
+	<thead>
+			<tr>
+					<th style="text-align: left">Variable</th>
+					<th style="text-align: left">Description</th>
+					<th style="text-align: left">Example / Default</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td style="text-align: left"><code>project_id</code></td>
+					<td style="text-align: left">Target Google Cloud Project ID</td>
+					<td style="text-align: left"><code>&quot;your-project-id&quot;</code></td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>region</code></td>
+					<td style="text-align: left">Target GCP deployment region</td>
+					<td style="text-align: left"><code>&quot;us-central1&quot;</code></td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>environment</code></td>
+					<td style="text-align: left">Deployment lifecycle (<code>dev</code>, <code>staging</code>, <code>prod</code>)</td>
+					<td style="text-align: left"><code>&quot;dev&quot;</code></td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>service_name</code></td>
+					<td style="text-align: left">Cloud Run service name</td>
+					<td style="text-align: left"><code>&quot;ai-daily-brief-mcp&quot;</code></td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>min_instances</code></td>
+					<td style="text-align: left">Minimum Cloud Run instances (0 for scale-to-zero)</td>
+					<td style="text-align: left"><code>0</code></td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>max_instances</code></td>
+					<td style="text-align: left">Maximum Cloud Run instances</td>
+					<td style="text-align: left"><code>5</code></td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>enable_alloydb</code></td>
+					<td style="text-align: left">Provision managed Google Cloud AlloyDB cluster</td>
+					<td style="text-align: left"><code>true</code></td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>alloydb_database_name</code></td>
+					<td style="text-align: left">Primary PostgreSQL database name</td>
+					<td style="text-align: left"><code>&quot;aibrief&quot;</code></td>
+			</tr>
+			<tr>
+					<td style="text-align: left"><code>mcp_service_name</code></td>
+					<td style="text-align: left">Target MCP service for A2A Agent binding</td>
+					<td style="text-align: left"><code>&quot;ai-daily-brief-mcp&quot;</code></td>
+			</tr>
+	</tbody>
+</table>
+<hr>
+<h2 id="-step-3-launching-the-local-stack">
+  💻 Step 3: Launching the Local Stack
+  <a class="anchor" href="#-step-3-launching-the-local-stack">#</a>
+</h2>
+<h3 id="parallel-multi-runner-recommended">
+  Parallel Multi-Runner (Recommended)
+  <a class="anchor" href="#parallel-multi-runner-recommended">#</a>
+</h3>
+<p>Start the entire development environment (all 4 services in parallel) with a single command:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>bazel run //:dev
+</span></span></code></pre></div><p>This concurrently launches:</p>
+<ol>
+<li>📚 <strong>Hugo Documentation Site</strong>: <code>http://localhost:1313</code></li>
+<li>🧪 <strong>A2A Diagnostic Test App</strong>: <code>http://localhost:8888</code></li>
+<li>🛡️ <strong>MCP Server &amp; REST Control Plane</strong>: <code>http://localhost:8080</code> (<code>MODENV_PROFILE=dev</code>)</li>
+<li>🤖 <strong>Agent-to-Agent (A2A) Service</strong>: <code>http://localhost:8081</code> (<code>MODENV_PROFILE=dev</code>)</li>
+</ol>
+<hr>
+<h3 id="running-individual-services">
+  Running Individual Services
+  <a class="anchor" href="#running-individual-services">#</a>
+</h3>
+<p>You can also run individual services as needed:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 1. Run MCP &amp; REST Server on port 8080</span>
+</span></span><span style="display:flex;"><span>bazel run //:run
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 2. Run A2A Agent on port 8081</span>
+</span></span><span style="display:flex;"><span>bazel run //:run-agent
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 3. Run interactive Web Test Harness on port 8888</span>
+</span></span><span style="display:flex;"><span>bazel run //:run-test-app
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 4. Serve the Hugo documentation site on port 1313</span>
+</span></span><span style="display:flex;"><span>bazel run //:serve-docs
+</span></span></code></pre></div><hr>
+<h3 id="activating-specific-environment-profiles">
+  Activating Specific Environment Profiles
+  <a class="anchor" href="#activating-specific-environment-profiles">#</a>
+</h3>
+<p>Pass <code>MODENV_PROFILE</code> (or <code>ENV</code>) to run with specific configurations:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Run with integration profile (AlloyDB / Cloud Postgres)</span>
+</span></span><span style="display:flex;"><span>MODENV_PROFILE<span style="color:#f92672">=</span>integration bazel run //:run
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Run with test profile (In-memory SQLite)</span>
+</span></span><span style="display:flex;"><span>MODENV_PROFILE<span style="color:#f92672">=</span>test bazel run //:run
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Run with dev profile explicitly</span>
+</span></span><span style="display:flex;"><span>MODENV_PROFILE<span style="color:#f92672">=</span>dev bazel run //:run
+</span></span></code></pre></div><hr>
+<h2 id="-step-4-verification--diagnostic-playground">
+  🔍 Step 4: Verification &amp; Diagnostic Playground
+  <a class="anchor" href="#-step-4-verification--diagnostic-playground">#</a>
+</h2>
+<h3 id="1-service-health-probes">
+  1. Service Health Probes
+  <a class="anchor" href="#1-service-health-probes">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Verify MCP Server health</span>
+</span></span><span style="display:flex;"><span>curl http://localhost:8080/healthz
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Verify A2A Agent health</span>
+</span></span><span style="display:flex;"><span>curl http://localhost:8081/healthz
+</span></span></code></pre></div><h3 id="2-interactive-web-test-harness">
+  2. Interactive Web Test Harness
+  <a class="anchor" href="#2-interactive-web-test-harness">#</a>
+</h3>
+<p>Open <code>http://localhost:8888</code> in your browser to access the test UI. This visual harness provides:</p>
+<ul>
+<li>Live status checks for the MCP Server and A2A Agent</li>
+<li>Form-based invocation of MCP tools (<code>generate_brief</code>, <code>search_briefs</code>, <code>get_stats</code>)</li>
+<li>Live preview of generated <strong>A2UI Adaptive Card</strong> HTML/JSON payloads</li>
+<li>A2A multi-turn chat stream with execution telemetry</li>
+</ul>
+<hr>
+<h2 id="-cli-flags-reference">
+  🛠️ CLI Flags Reference
+  <a class="anchor" href="#-cli-flags-reference">#</a>
+</h2>
+<p>The <code>mcp-server</code> binary supports standard execution flags:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Usage of mcp-server:
+</span></span><span style="display:flex;"><span>  -port string
+</span></span><span style="display:flex;"><span>        Port to listen on (defaults to $PORT or 8080 for Cloud Run)
+</span></span><span style="display:flex;"><span>  -db string
+</span></span><span style="display:flex;"><span>        Path to SQLite database file or AlloyDB/PostgreSQL connection string
+</span></span><span style="display:flex;"><span>  -dsn string
+</span></span><span style="display:flex;"><span>        Explicit Google Cloud AlloyDB / PostgreSQL DSN
+</span></span><span style="display:flex;"><span>  -stdio
+</span></span><span style="display:flex;"><span>        Run in stdio mode for local desktop MCP clients (Antigravity/Claude/Cursor)
+</span></span></code></pre></div></article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/docs/getting-started.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#-prerequisites">📋 Prerequisites</a></li>
+    <li><a href="#-step-1-application-configuration-envtoml">⚙️ Step 1: Application Configuration (<code>.env.toml</code>)</a>
+      <ul>
+        <li><a href="#configuration-precedence-order">Configuration Precedence Order</a></li>
+        <li><a href="#setting-up-local-environment-files">Setting Up Local Environment Files</a></li>
+        <li><a href="#configuration-structure-reference">Configuration Structure Reference</a>
+          <ul>
+            <li><a href="#mcp-server-configsmcpenvdevtoml">MCP Server (<code>configs/mcp/.env.dev.toml</code>)</a></li>
+            <li><a href="#a2a-agent-configsagentenvdevtoml">A2A Agent (<code>configs/agent/.env.dev.toml</code>)</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#-step-2-terraform-infrastructure-variables-tfvars">🌍 Step 2: Terraform Infrastructure Variables (<code>*.tfvars</code>)</a>
+      <ul>
+        <li><a href="#setting-up-environment-variables">Setting Up Environment Variables</a></li>
+        <li><a href="#key-terraform-variables-reference">Key Terraform Variables Reference</a></li>
+      </ul>
+    </li>
+    <li><a href="#-step-3-launching-the-local-stack">💻 Step 3: Launching the Local Stack</a>
+      <ul>
+        <li><a href="#parallel-multi-runner-recommended">Parallel Multi-Runner (Recommended)</a></li>
+        <li><a href="#running-individual-services">Running Individual Services</a></li>
+        <li><a href="#activating-specific-environment-profiles">Activating Specific Environment Profiles</a></li>
+      </ul>
+    </li>
+    <li><a href="#-step-4-verification--diagnostic-playground">🔍 Step 4: Verification &amp; Diagnostic Playground</a>
+      <ul>
+        <li><a href="#1-service-health-probes">1. Service Health Probes</a></li>
+        <li><a href="#2-interactive-web-test-harness">2. Interactive Web Test Harness</a></li>
+      </ul>
+    </li>
+    <li><a href="#-cli-flags-reference">🛠️ CLI Flags Reference</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

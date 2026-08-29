@@ -1,0 +1,32 @@
+
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/getting-started/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/architecture/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/mcp-server/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/a2a-agent/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/gemini_enterprise/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/cloud-run/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/alloydb/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/rest-api/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/docs/troubleshooting/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/categories/</loc>
+  </url><url>
+    <loc>https://retail-cortex.github.io/ai-daily-brief/tags/</loc>
+  </url>
+</urlset>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  📚 AI Daily Brief Documentation
+  #
+
+Welcome to the AI Daily Brief developer documentation. Use the sidebar menu to navigate through the topics:
+
+🚀 Getting Started: Quickstart, running locally with Bazel, and environment profiles.
+🏛️ System Architecture: Parallel goroutine crawlers, SHA-256 deduplication, and data structures.
+🤖 Model Context Protocol (MCP): JSON-RPC 2.0 tool definitions, A2UI cards, and SSE streaming.
+🤖 Agent-to-Agent (A2A) Service: Autonomous Cloud Run agent service consuming MCP control plane.
+🌐 Gemini Enterprise Integration: Cloud Run IAM service identity bindings and Agent Card publishing.
+☁️ Google Cloud Run Deployment: Multi-arch Linux container binaries, Distroless images, and probes.
+💾 Google Cloud AlloyDB: AlloyDB for PostgreSQL connection strings, connection pooling, and migrations.
+📡 REST API Reference: Complete endpoint reference for HTTP routes and Multimodal Live WebSocket.
+🛠️ Troubleshooting Guide: Debugging workflows, AlloyDB auth proxy local tunnels, and IAM troubleshooting.
+">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/docs/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="Documentation">
+	<meta property="og:description" content="📚 AI Daily Brief Documentation # Welcome to the AI Daily Brief developer documentation. Use the sidebar menu to navigate through the topics:
+🚀 Getting Started: Quickstart, running locally with Bazel, and environment profiles. 🏛️ System Architecture: Parallel goroutine crawlers, SHA-256 deduplication, and data structures. 🤖 Model Context Protocol (MCP): JSON-RPC 2.0 tool definitions, A2UI cards, and SSE streaming. 🤖 Agent-to-Agent (A2A) Service: Autonomous Cloud Run agent service consuming MCP control plane. 🌐 Gemini Enterprise Integration: Cloud Run IAM service identity bindings and Agent Card publishing. ☁️ Google Cloud Run Deployment: Multi-arch Linux container binaries, Distroless images, and probes. 💾 Google Cloud AlloyDB: AlloyDB for PostgreSQL connection strings, connection pooling, and migrations. 📡 REST API Reference: Complete endpoint reference for HTTP routes and Multimodal Live WebSocket. 🛠️ Troubleshooting Guide: Debugging workflows, AlloyDB auth proxy local tunnels, and IAM troubleshooting.">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="website">
+<title>Documentation | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/docs/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<link rel="alternate" type="application/rss+xml" href="https://retail-cortex.github.io/ai-daily-brief/docs/index.xml" title="AI Daily Brief" />
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="active">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Documentation</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents"></nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-ai-daily-brief-documentation">
+  📚 AI Daily Brief Documentation
+  <a class="anchor" href="#-ai-daily-brief-documentation">#</a>
+</h1>
+<p>Welcome to the <strong>AI Daily Brief</strong> developer documentation. Use the sidebar menu to navigate through the topics:</p>
+<ol>
+<li>🚀 <strong><a href="/docs/getting-started/">Getting Started</a></strong>: Quickstart, running locally with Bazel, and environment profiles.</li>
+<li>🏛️ <strong><a href="/docs/architecture/">System Architecture</a></strong>: Parallel goroutine crawlers, SHA-256 deduplication, and data structures.</li>
+<li>🤖 <strong><a href="/docs/mcp-server/">Model Context Protocol (MCP)</a></strong>: JSON-RPC 2.0 tool definitions, A2UI cards, and SSE streaming.</li>
+<li>🤖 <strong><a href="/docs/a2a-agent/">Agent-to-Agent (A2A) Service</a></strong>: Autonomous Cloud Run agent service consuming MCP control plane.</li>
+<li>🌐 <strong><a href="/docs/gemini_enterprise/">Gemini Enterprise Integration</a></strong>: Cloud Run IAM service identity bindings and Agent Card publishing.</li>
+<li>☁️ <strong><a href="/docs/cloud-run/">Google Cloud Run Deployment</a></strong>: Multi-arch Linux container binaries, Distroless images, and probes.</li>
+<li>💾 <strong><a href="/docs/alloydb/">Google Cloud AlloyDB</a></strong>: AlloyDB for PostgreSQL connection strings, connection pooling, and migrations.</li>
+<li>📡 <strong><a href="/docs/rest-api/">REST API Reference</a></strong>: Complete endpoint reference for HTTP routes and Multimodal Live WebSocket.</li>
+<li>🛠️ <strong><a href="/docs/troubleshooting/">Troubleshooting Guide</a></strong>: Debugging workflows, AlloyDB auth proxy local tunnels, and IAM troubleshooting.</li>
+</ol>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/docs/_index.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents"></nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

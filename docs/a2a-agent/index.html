@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en-us" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+  🤖 Agent-to-Agent (A2A) Service &amp; Agent Card
+  #
+
+The A2A Agent (cmd/a2a-agent) is an autonomous AI agent service deployable to Google Cloud Run that executes intelligence workflows via the ToolExecutor engine, supporting both Direct In-Process Tool Execution (zero network latency) and Remote MCP Control Plane invocation.
+
+
+  🎯 Architecture
+  #
+
+flowchart TD
+    Caller[&#34;External Agent / Gemini Enterprise / Discovery Engine&#34;] --&gt;|&#34;POST /agent/invoke or /run&#34;| A2A[&#34;A2A Agent Service (:8081)&#34;]
+    Caller --&gt;|&#34;GET /.well-known/agent-card.json&#34;| Card[&#34;A2A Protocol Card&#34;]
+    
+    subgraph A2A_Engine [&#34;A2A Agent Tool Execution Engine&#34;]
+        A2A --&gt;|&#34;ToolExecutor&#34;| Exec{&#34;Execution Mode&#34;}
+        Exec --&gt;|&#34;Direct In-Process&#34;| InProc[&#34;InProcessToolExecutor (0ms Network)&#34;]
+        Exec --&gt;|&#34;Remote Fallback&#34;| Remote[&#34;MCPClient (JSON-RPC /mcp)&#34;]
+    end
+
+    InProc --&gt;|&#34;Direct GORM&#34;| DB[(&#34;AlloyDB Cluster&#34;)]
+    Remote --&gt;|&#34;OIDC Bearer Auth&#34;| MCP[&#34;MCP Server (:8080)&#34;]
+    MCP --&gt;|&#34;PostgreSQL / AlloyDB&#34;| DB
+    InProc --&gt;|&#34;ADC&#34;| Gemini[&#34;Vertex AI Gemini 3.7 Flash&#34;]
+    MCP --&gt;|&#34;ADC&#34;| Gemini
+
+
+  📋 Google Agent Registry A2A Agent Card Specification
+  #
+
+The A2A Agent serves the official Google Agent Registry Schema containing top-level url, protocolVersion, defaultInputModes, defaultOutputModes, skills, and capabilities.">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://retail-cortex.github.io/ai-daily-brief/docs/a2a-agent/">
+	<meta property="og:site_name" content="AI Daily Brief">
+	<meta property="og:title" content="A2A Agent & MCP Integration">
+	<meta property="og:description" content="🤖 Agent-to-Agent (A2A) Service &amp; Agent Card # The A2A Agent (cmd/a2a-agent) is an autonomous AI agent service deployable to Google Cloud Run that executes intelligence workflows via the ToolExecutor engine, supporting both Direct In-Process Tool Execution (zero network latency) and Remote MCP Control Plane invocation.
+🎯 Architecture # flowchart TD Caller[&#34;External Agent / Gemini Enterprise / Discovery Engine&#34;] --&gt;|&#34;POST /agent/invoke or /run&#34;| A2A[&#34;A2A Agent Service (:8081)&#34;] Caller --&gt;|&#34;GET /.well-known/agent-card.json&#34;| Card[&#34;A2A Protocol Card&#34;] subgraph A2A_Engine [&#34;A2A Agent Tool Execution Engine&#34;] A2A --&gt;|&#34;ToolExecutor&#34;| Exec{&#34;Execution Mode&#34;} Exec --&gt;|&#34;Direct In-Process&#34;| InProc[&#34;InProcessToolExecutor (0ms Network)&#34;] Exec --&gt;|&#34;Remote Fallback&#34;| Remote[&#34;MCPClient (JSON-RPC /mcp)&#34;] end InProc --&gt;|&#34;Direct GORM&#34;| DB[(&#34;AlloyDB Cluster&#34;)] Remote --&gt;|&#34;OIDC Bearer Auth&#34;| MCP[&#34;MCP Server (:8080)&#34;] MCP --&gt;|&#34;PostgreSQL / AlloyDB&#34;| DB InProc --&gt;|&#34;ADC&#34;| Gemini[&#34;Vertex AI Gemini 3.7 Flash&#34;] MCP --&gt;|&#34;ADC&#34;| Gemini 📋 Google Agent Registry A2A Agent Card Specification # The A2A Agent serves the official Google Agent Registry Schema containing top-level url, protocolVersion, defaultInputModes, defaultOutputModes, skills, and capabilities.">
+	<meta property="og:locale" content="en_us">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="docs">
+<title>A2A Agent &amp; MCP Integration | AI Daily Brief</title>
+<link rel="icon" href="/ai-daily-brief/favicon.png" >
+<link rel="manifest" href="/ai-daily-brief/manifest.json">
+<link rel="canonical" href="https://retail-cortex.github.io/ai-daily-brief/docs/a2a-agent/">
+<link rel="stylesheet" href="/ai-daily-brief/book.min.0761a9f055d7dd9c25e6c9ff3b0a377ed89777c64c56f406513d2265ac2d9296.css" integrity="sha256-B2Gp8FXX3Zwl5sn/Owo3ftiXd8ZMVvQGUT0iZawtkpY=" crossorigin="anonymous">
+  <script defer src="/ai-daily-brief/fuse.min.js"></script>
+  <script defer src="/ai-daily-brief/en.search.min.b9f283c19268d46afa8f6995e0f7a6ce94a03ca29072e5367792ec3fccd6c433.js" integrity="sha256-ufKDwZJo1Gr6j2mV4PemzpSgPKKQcuU2d5LsP8zWxDM=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/ai-daily-brief/"><span>AI Daily Brief</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/" class="">Documentation</a>
+  
+
+          
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/getting-started/" class="">Getting Started</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/architecture/" class="">Architecture</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/mcp-server/" class="">MCP Server &amp; A2UI</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/a2a-agent/" class="active">A2A Agent &amp; MCP Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/gemini_enterprise/" class="">Gemini Enterprise Integration</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/cloud-run/" class="">Cloud Run Deployment</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/alloydb/" class="">Google Cloud AlloyDB</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/rest-api/" class="">REST API Reference</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/ai-daily-brief/docs/troubleshooting/" class="">Troubleshooting Guide</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/ai-daily-brief/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>A2A Agent &amp; MCP Integration</h3>
+
+  <label for="toc-control">
+    
+    <img src="/ai-daily-brief/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#-architecture">🎯 Architecture</a></li>
+    <li><a href="#-google-agent-registry-a2a-agent-card-specification">📋 Google Agent Registry A2A Agent Card Specification</a>
+      <ul>
+        <li><a href="#agent-card-json-schema">Agent Card JSON Schema:</a></li>
+      </ul>
+    </li>
+    <li><a href="#-api-endpoints">📡 API Endpoints</a>
+      <ul>
+        <li><a href="#1-post-agentinvoke-or-post-run">1. <code>POST /agent/invoke</code> or <code>POST /run</code></a></li>
+        <li><a href="#2-post-chat">2. <code>POST /chat</code></a></li>
+        <li><a href="#3-get-healthz--get-status">3. <code>GET /healthz</code> &amp; <code>GET /status</code></a></li>
+      </ul>
+    </li>
+    <li><a href="#-publishing-to-gemini-enterprise--agent-registry">🚀 Publishing to Gemini Enterprise &amp; Agent Registry</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown book-article"><h1 id="-agent-to-agent-a2a-service--agent-card">
+  🤖 Agent-to-Agent (A2A) Service &amp; Agent Card
+  <a class="anchor" href="#-agent-to-agent-a2a-service--agent-card">#</a>
+</h1>
+<p>The <strong>A2A Agent</strong> (<code>cmd/a2a-agent</code>) is an autonomous AI agent service deployable to <strong>Google Cloud Run</strong> that executes intelligence workflows via the <code>ToolExecutor</code> engine, supporting both <strong>Direct In-Process Tool Execution</strong> (zero network latency) and <strong>Remote MCP Control Plane</strong> invocation.</p>
+<hr>
+<h2 id="-architecture">
+  🎯 Architecture
+  <a class="anchor" href="#-architecture">#</a>
+</h2>
+<pre tabindex="0"><code class="language-mermaid" data-lang="mermaid">flowchart TD
+    Caller[&#34;External Agent / Gemini Enterprise / Discovery Engine&#34;] --&gt;|&#34;POST /agent/invoke or /run&#34;| A2A[&#34;A2A Agent Service (:8081)&#34;]
+    Caller --&gt;|&#34;GET /.well-known/agent-card.json&#34;| Card[&#34;A2A Protocol Card&#34;]
+    
+    subgraph A2A_Engine [&#34;A2A Agent Tool Execution Engine&#34;]
+        A2A --&gt;|&#34;ToolExecutor&#34;| Exec{&#34;Execution Mode&#34;}
+        Exec --&gt;|&#34;Direct In-Process&#34;| InProc[&#34;InProcessToolExecutor (0ms Network)&#34;]
+        Exec --&gt;|&#34;Remote Fallback&#34;| Remote[&#34;MCPClient (JSON-RPC /mcp)&#34;]
+    end
+
+    InProc --&gt;|&#34;Direct GORM&#34;| DB[(&#34;AlloyDB Cluster&#34;)]
+    Remote --&gt;|&#34;OIDC Bearer Auth&#34;| MCP[&#34;MCP Server (:8080)&#34;]
+    MCP --&gt;|&#34;PostgreSQL / AlloyDB&#34;| DB
+    InProc --&gt;|&#34;ADC&#34;| Gemini[&#34;Vertex AI Gemini 3.7 Flash&#34;]
+    MCP --&gt;|&#34;ADC&#34;| Gemini
+</code></pre><hr>
+<h2 id="-google-agent-registry-a2a-agent-card-specification">
+  📋 Google Agent Registry A2A Agent Card Specification
+  <a class="anchor" href="#-google-agent-registry-a2a-agent-card-specification">#</a>
+</h2>
+<p>The A2A Agent serves the official <a href="https://docs.cloud.google.com/agent-registry/json-schemas">Google Agent Registry Schema</a> containing top-level <code>url</code>, <code>protocolVersion</code>, <code>defaultInputModes</code>, <code>defaultOutputModes</code>, <code>skills</code>, and <code>capabilities</code>.</p>
+<p>The card is available across all canonical paths:</p>
+<ul>
+<li><code>GET /a2a/app/.well-known/agent-card.json</code></li>
+<li><code>GET /.well-known/agent-card.json</code></li>
+<li><code>GET /.well-known/agent.json</code></li>
+<li><code>GET /agent-card.json</code></li>
+<li><code>GET /agent-card</code></li>
+</ul>
+<h3 id="agent-card-json-schema">
+  Agent Card JSON Schema:
+  <a class="anchor" href="#agent-card-json-schema">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;ai-daily-brief-a2a-agent&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;Autonomous AI intelligence agent providing deep research, structured synthesis, executive TL;DR briefings, and live grounding across frontier AI models, academic research papers, open-source tooling, and Google Cloud infrastructure releases backed by the AI Daily Brief MCP control plane.&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;version&#34;</span>: <span style="color:#e6db74">&#34;1.0.0&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;protocolVersion&#34;</span>: <span style="color:#e6db74">&#34;1.0.0&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;url&#34;</span>: <span style="color:#e6db74">&#34;https://ai-daily-brief-agent-dev-${PROJECT_NUMBER}.us-central1.run.app&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;defaultInputModes&#34;</span>: [
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;text/plain&#34;</span>
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;defaultOutputModes&#34;</span>: [
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;text/plain&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;application/a2ui+json&#34;</span>
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;skills&#34;</span>: [
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;id&#34;</span>: <span style="color:#e6db74">&#34;research_topic&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;Research AI Topic&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;Perform deep research on a specific AI model, research paper, or cloud infrastructure topic&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;tags&#34;</span>: [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;research&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;grounding&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;search&#34;</span>
+</span></span><span style="display:flex;"><span>      ],
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;examples&#34;</span>: [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;Perform deep research on Gemini 3.7 reasoning capabilities&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;Search latest research papers on multimodal mixture-of-experts&#34;</span>
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;id&#34;</span>: <span style="color:#e6db74">&#34;generate_tldr&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;Generate Strategic TLDR&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;Generate an executive 3-section strategic intelligence summary of today&#39;s key developments&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;tags&#34;</span>: [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;summary&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;executive&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;briefing&#34;</span>
+</span></span><span style="display:flex;"><span>      ],
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;examples&#34;</span>: [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;Generate today&#39;s executive intelligence summary&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;Summarize key AI infrastructure developments for today&#34;</span>
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;id&#34;</span>: <span style="color:#e6db74">&#34;trigger_crawl&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;Trigger Live Intelligence Crawl&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;Execute an immediate live crawl across all 5 intelligence streams into AlloyDB&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;tags&#34;</span>: [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;crawler&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;ingestion&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;refresh&#34;</span>
+</span></span><span style="display:flex;"><span>      ],
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;examples&#34;</span>: [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;Trigger an immediate live crawl of AI feeds&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;Refresh feeds from arXiv, blogs, and official releases&#34;</span>
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;id&#34;</span>: <span style="color:#e6db74">&#34;chat&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;Interactive Grounded Research Chat&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;description&#34;</span>: <span style="color:#e6db74">&#34;Interactive multi-turn research grounded in today&#39;s digest or specific articles&#34;</span>,
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;tags&#34;</span>: [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;chat&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;dialogue&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;grounding&#34;</span>
+</span></span><span style="display:flex;"><span>      ],
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;examples&#34;</span>: [
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;Tell me more about the architecture behind Gemini 3.7&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;Compare recent frontier model releases&#34;</span>
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;capabilities&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;streaming&#34;</span>: <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr>
+<h2 id="-api-endpoints">
+  📡 API Endpoints
+  <a class="anchor" href="#-api-endpoints">#</a>
+</h2>
+<h3 id="1-post-agentinvoke-or-post-run">
+  1. <code>POST /agent/invoke</code> or <code>POST /run</code>
+  <a class="anchor" href="#1-post-agentinvoke-or-post-run">#</a>
+</h3>
+<p>Executes an autonomous research task using the MCP control plane.</p>
+<p><strong>Request:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;task&#34;</span>: <span style="color:#e6db74">&#34;Find latest Gemini 3.7 papers and generate a briefing&#34;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr>
+<h3 id="2-post-chat">
+  2. <code>POST /chat</code>
+  <a class="anchor" href="#2-post-chat">#</a>
+</h3>
+<p>Interactive conversational research grounded against the MCP server.</p>
+<p><strong>Request:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;message&#34;</span>: <span style="color:#e6db74">&#34;Summarize key features of Gemini 3.7 Flash reasoning capabilities&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;session_id&#34;</span>: <span style="color:#e6db74">&#34;session_a2a_01&#34;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr>
+<h3 id="3-get-healthz--get-status">
+  3. <code>GET /healthz</code> &amp; <code>GET /status</code>
+  <a class="anchor" href="#3-get-healthz--get-status">#</a>
+</h3>
+<p>Readiness/liveness probes and runtime status showing MCP server connectivity and model settings.</p>
+<hr>
+<h2 id="-publishing-to-gemini-enterprise--agent-registry">
+  🚀 Publishing to Gemini Enterprise &amp; Agent Registry
+  <a class="anchor" href="#-publishing-to-gemini-enterprise--agent-registry">#</a>
+</h2>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>agents-cli publish gemini-enterprise <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --agent-card-url https://ai-daily-brief-agent-dev-<span style="color:#e6db74">${</span>PROJECT_NUMBER<span style="color:#e6db74">}</span>.us-central1.run.app/a2a/app/.well-known/agent-card.json <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --gemini-enterprise-app-id projects/<span style="color:#e6db74">${</span>PROJECT_NUMBER<span style="color:#e6db74">}</span>/locations/global/collections/default_collection/engines/ai-daily-brief
+</span></span></code></pre></div><blockquote>
+<p>[!TIP]
+For the complete step-by-step IAM permissions setup (<code>roles/run.invoker</code> for Discovery Engine), organization policy overrides, and interactive Google Cloud Console workflows, see the dedicated <a href="/docs/gemini_enterprise/">Gemini Enterprise Integration Guide</a>.</p>
+</blockquote>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+  <div>
+    <a class="flex align-center" href="https://github.com/retail-cortex/ai-daily-brief/edit/main/docs/content/content/docs/a2a-agent.md" target="_blank" rel="noopener">
+      <img src="/ai-daily-brief/svg/edit.svg" class="book-icon" alt="" />
+      <span>Edit this page</span>
+    </a>
+  </div>
+
+
+</div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#-architecture">🎯 Architecture</a></li>
+    <li><a href="#-google-agent-registry-a2a-agent-card-specification">📋 Google Agent Registry A2A Agent Card Specification</a>
+      <ul>
+        <li><a href="#agent-card-json-schema">Agent Card JSON Schema:</a></li>
+      </ul>
+    </li>
+    <li><a href="#-api-endpoints">📡 API Endpoints</a>
+      <ul>
+        <li><a href="#1-post-agentinvoke-or-post-run">1. <code>POST /agent/invoke</code> or <code>POST /run</code></a></li>
+        <li><a href="#2-post-chat">2. <code>POST /chat</code></a></li>
+        <li><a href="#3-get-healthz--get-status">3. <code>GET /healthz</code> &amp; <code>GET /status</code></a></li>
+      </ul>
+    </li>
+    <li><a href="#-publishing-to-gemini-enterprise--agent-registry">🚀 Publishing to Gemini Enterprise &amp; Agent Registry</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
