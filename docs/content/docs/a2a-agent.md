@@ -11,7 +11,7 @@ The **A2A Agent** (`cmd/a2a-agent`) is an autonomous AI agent service deployable
 
 ## 🎯 Architecture
 
-```mermaid
+{{< mermaid >}}
 flowchart TD
     Caller["External Agent / Gemini Enterprise / Discovery Engine"] -->|"POST /agent/invoke or /run"| A2A["A2A Agent Service (:8081)"]
     Caller -->|"GET /.well-known/agent-card.json"| Card["A2A Protocol Card"]
@@ -27,7 +27,7 @@ flowchart TD
     MCP -->|"PostgreSQL / AlloyDB"| DB
     InProc -->|"ADC"| Gemini["Vertex AI Gemini 3.7 Flash"]
     MCP -->|"ADC"| Gemini
-```
+{{< /mermaid >}}
 
 ---
 

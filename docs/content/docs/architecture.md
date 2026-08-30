@@ -13,7 +13,7 @@ AI Daily Brief is designed around high concurrency, sub-second latency, and clea
 
 The crawler (`internal/crawler`) uses concurrent Go goroutines with `sync.WaitGroup` to dispatch scrapers simultaneously across all configured sources:
 
-```mermaid
+{{< mermaid >}}
 flowchart TD
     Trigger["Trigger Batch Crawl<br/>(POST /api/batch/run or Cron 08:00)"] --> FanOut["sync.WaitGroup Goroutine Fan-Out"]
     
@@ -30,7 +30,7 @@ flowchart TD
     S5 --> Dedup
 
     Dedup --> DB[("Google Cloud AlloyDB / PostgreSQL Cluster")]
-```
+{{< /mermaid >}}
 
 - **Execution Latency**: Typically **< 900ms** to scrape, parse, sanitize, and insert 20–40 new items.
 - **Deduplication**: Every article's unique canonical URL is indexed. Pre-existing records are skipped in memory and database transaction boundaries.

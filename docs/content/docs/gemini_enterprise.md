@@ -15,7 +15,7 @@ AI Daily Brief supports dual integration modes:
 
 ## 🏗 Architecture Overview
 
-```mermaid
+{{< mermaid >}}
 flowchart TD
     subgraph GeminiEnterprise["Google Gemini Enterprise / Discovery Engine"]
         User["Business User Prompt"] --> AgentRegistry["Agent Registry"]
@@ -28,7 +28,7 @@ flowchart TD
         CloudRunMCP -->|"PostgreSQL Protocol"| AlloyDB[("AlloyDB Cluster")]
         CloudRunMCP -->|"Vertex ADC"| Gemini["Vertex AI Gemini 3.7 Flash"]
     end
-```
+{{< /mermaid >}}
 
 ---
 

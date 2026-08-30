@@ -23,7 +23,7 @@ type: "docs"
 
 ## 🏗️ Core Architecture at a Glance
 
-```mermaid
+{{< mermaid >}}
 flowchart TD
     subgraph Consumers["Callers & Consumers"]
         VA["Vertex AI Agent Engine"]
@@ -52,7 +52,7 @@ flowchart TD
 
     Core -->|"PostgreSQL Protocol (Max 25 conns)"| DB[("Google Cloud AlloyDB / PostgreSQL")]
     Core -->|"gRPC / ADC"| Gemini["Vertex AI Gemini Foundation Models"]
-```
+{{< /mermaid >}}
 
 ---
 

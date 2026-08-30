@@ -13,7 +13,7 @@ This guide covers common issues, edge cases, and debugging workflows when develo
 
 When developing or debugging locally, you can connect your local workstation directly to the private Google Cloud AlloyDB cluster using the **AlloyDB Auth Proxy**.
 
-```mermaid
+{{< mermaid >}}
 flowchart LR
     subgraph Workstation["Local Workstation"]
         App["Local Server / Agent<br/>(port :8080 / :8081)"]
@@ -31,7 +31,7 @@ flowchart LR
 
     Proxy -->|"Authenticates"| Auth
     Proxy -->|"Encrypted mTLS Tunnel"| Instance
-```
+{{< /mermaid >}}
 
 ### Step 1: Install the AlloyDB Auth Proxy
 If you don't already have the proxy installed:
