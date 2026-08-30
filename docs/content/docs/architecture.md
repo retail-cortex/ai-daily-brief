@@ -13,27 +13,23 @@ AI Daily Brief is designed around high concurrency, sub-second latency, and clea
 
 The crawler (`internal/crawler`) uses concurrent Go goroutines with `sync.WaitGroup` to dispatch scrapers simultaneously across all configured sources:
 
-```
-                  ┌──────────────────────┐
-                  │ Trigger Batch Crawl  │
-                  └──────────┬───────────┘
-                             │
-      ┌──────────────┬───────┴──────┬──────────────┬──────────────┐
-      ▼              ▼              ▼              ▼              ▼
-┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐
-│ RSS Feeds │  │ arXiv API │  │HuggingFace│  │ GCP Notes │  │ VC Blogs  │
-│(Frontier) │  │  (Papers) │  │  (Papers) │  │  (Cloud)  │  │(Business) │
-└─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
-      │              │              │              │              │
-      └──────────────┼──────────────┼──────────────┼──────────────┘
-                     ▼
-        ┌─────────────────────────┐
-        │ SHA-256 Deduplication   │
-        └────────────┬────────────┘
-                     ▼
-        ┌─────────────────────────┐
-        │ AlloyDB / Postgres DB   │
-        └─────────────────────────┘
+```mermaid
+flowchart TD
+    Trigger["Trigger Batch Crawl<br/>(POST /api/batch/run or Cron 08:00)"] --> FanOut["sync.WaitGroup Goroutine Fan-Out"]
+    
+    FanOut --> S1["RSS Feeds<br/>(Frontier Models)"]
+    FanOut --> S2["arXiv API<br/>(cs.CL, cs.AI, cs.CV)"]
+    FanOut --> S3["HuggingFace Daily<br/>(Open-Source Papers)"]
+    FanOut --> S4["Google Cloud Notes<br/>(Vertex & GKE Releases)"]
+    FanOut --> S5["VC / Industry Feeds<br/>(Business & Datacenters)"]
+
+    S1 --> Dedup["SHA-256 Deduplication & Content Sanitization Engine"]
+    S2 --> Dedup
+    S3 --> Dedup
+    S4 --> Dedup
+    S5 --> Dedup
+
+    Dedup --> DB[("Google Cloud AlloyDB / PostgreSQL Cluster")]
 ```
 
 - **Execution Latency**: Typically **< 900ms** to scrape, parse, sanitize, and insert 20–40 new items.

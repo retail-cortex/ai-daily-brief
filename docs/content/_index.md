@@ -23,36 +23,35 @@ type: "docs"
 
 ## 🏗️ Core Architecture at a Glance
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        CALLERS & CONSUMERS                             │
-│   Vertex AI Agent Engine  •  Cloud Run Agents  •  Desktop IDEs         │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ HTTP / SSE / JSON-RPC
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                  AI DAILY BRIEF (cmd/mcp-server)                       │
-│                                                                        │
-│   ┌─────────────────────┐  ┌─────────────────────┐  ┌──────────────┐   │
-│   │ MCP Protocol Engine │  │ A2UI Card Formatter │  │ REST API     │   │
-│   │ POST /mcp, GET /sse │  │ Interactive Cards   │  │ /api/items   │   │
-│   └──────────┬──────────┘  └──────────┬──────────┘  └───────┬──────┘   │
-│              └────────────────────────┼─────────────────────┘          │
-│                                       ▼                                │
-│   ┌────────────────────────────────────────────────────────────────┐   │
-│   │                   CORE INTELLIGENCE ENGINE                     │   │
-│   │   • Parallel Goroutine Crawlers (<1s execution)                │   │
-│   │   • Vertex AI ADC Client (Gemini 3.7 Flash)                    │   │
-│   │   • SHA-256 Deduplication & Content Sanitization              │   │
-│   └───────────────────────────────────┬────────────────────────────┘   │
-└───────────────────────────────────────┼────────────────────────────────┘
-                                        │
-                         ┌──────────────┴──────────────┐
-                         ▼                             ▼
-        ┌────────────────────────────────┐    ┌─────────────────┐
-        │ Google Cloud AlloyDB / Postgres│    │ Vertex AI ADC   │
-        │ Connection Pool (Max 25 conns) │    │ Gemini Models   │
-        └────────────────────────────────┘    └─────────────────┘
+```mermaid
+flowchart TD
+    subgraph Consumers["Callers & Consumers"]
+        VA["Vertex AI Agent Engine"]
+        CR["Cloud Run A2A Agents"]
+        IDE["Desktop IDEs & Clients"]
+    end
+
+    Consumers -->|"HTTP / SSE / JSON-RPC"| MCP_Entry["AI Daily Brief MCP / REST Server"]
+
+    subgraph Server["AI Daily Brief Server (cmd/mcp-server)"]
+        direction TB
+        MCP_Entry --> MCP_Proto["MCP Protocol Engine<br/>(POST /mcp, GET /sse)"]
+        MCP_Entry --> A2UI["A2UI Card Formatter<br/>(application/a2ui+json)"]
+        MCP_Entry --> REST["REST API Engine<br/>(/api/items, /api/batch/run)"]
+
+        MCP_Proto --> Core["Core Intelligence Engine"]
+        A2UI --> Core
+        REST --> Core
+
+        subgraph Core["Core Intelligence Engine"]
+            Crawler["Parallel Goroutine Crawlers (< 900ms)"]
+            Dedup["SHA-256 Deduplication & Sanitization"]
+            Vertex["Vertex AI ADC Client (Gemini 3.7 Flash)"]
+        end
+    end
+
+    Core -->|"PostgreSQL Protocol (Max 25 conns)"| DB[("Google Cloud AlloyDB / PostgreSQL")]
+    Core -->|"gRPC / ADC"| Gemini["Vertex AI Gemini Foundation Models"]
 ```
 
 ---

@@ -198,9 +198,22 @@ The A2A Agent serves the compliant Google Agent Registry specification directly 
         "Compare recent frontier model releases"
       ]
     }
-  ],
   "capabilities": {
-    "streaming": true
+    "streaming": true,
+    "extensions": [
+      {
+        "uri": "https://a2ui.org/a2a-extension/a2ui/v0.9",
+        "description": "Provides agent driven UI using the A2UI JSON format.",
+        "params": {
+          "acceptsInlineCatalogs": true,
+          "supportedCatalogIds": [
+            "https://a2ui.org/specification/v0_9/material_catalog.json",
+            "https://www.gstatic.com/vertexaisearch/a2ui/v0_9/gemini_enterprise_composite_catalog.json",
+            "https://a2ui.org/specification/v0_9/basic_catalog.json"
+          ]
+        }
+      }
+    ]
   }
 }
 ```

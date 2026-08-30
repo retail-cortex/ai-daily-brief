@@ -198,8 +198,7 @@ Open `http://localhost:8888` in your browser to access the test UI. This visual 
 
 ## 🛠️ CLI Flags Reference
 
-The `mcp-server` binary supports standard execution flags:
-
+### MCP Server (`cmd/mcp-server`)
 ```text
 Usage of mcp-server:
   -port string
@@ -210,4 +209,19 @@ Usage of mcp-server:
         Explicit Google Cloud AlloyDB / PostgreSQL DSN
   -stdio
         Run in stdio mode for local desktop MCP clients (Antigravity/Claude/Cursor)
+```
+
+### A2A Agent (`cmd/a2a-agent`)
+```text
+Usage of a2a-agent:
+  -port string
+        Port to listen on (defaults to $PORT or 8081 for Cloud Run)
+  -in-process
+        Force direct in-process ToolExecutor mode backed directly by GORM and AlloyDB
+  -db string
+        Path to SQLite database file or AlloyDB/PostgreSQL connection string for in-process mode
+  -dsn string
+        Explicit Google Cloud AlloyDB / PostgreSQL DSN for direct in-process execution
+  -mcp-url string
+        Target remote MCP Server endpoint URL for remote tool dispatch fallback
 ```

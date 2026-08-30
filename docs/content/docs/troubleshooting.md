@@ -13,17 +13,24 @@ This guide covers common issues, edge cases, and debugging workflows when develo
 
 When developing or debugging locally, you can connect your local workstation directly to the private Google Cloud AlloyDB cluster using the **AlloyDB Auth Proxy**.
 
-```
-┌─────────────────────────────────┐          ┌───────────────────────────┐          ┌───────────────────────────┐
-│       Local Workstation         │          │     Google Cloud IAM      │          │     Private VPC Network   │
-│                                 │          │                           │          │                           │
-│  [Local MCP Server]             │          │                           │          │                           │
-│   (port :8080)                  │          │                           │          │                           │
-│        │                        │          │                           │          │                           │
-│        ▼ localhost:5432         │          │                           │          │                           │
-│  [alloydb-auth-proxy] ──────────┼─────────►│ Authenticates via gcloud  │─────────►│  AlloyDB Primary Instance │
-│   (mTLS Tunnel)                 │          │ (roles/alloydb.client)    │          │  (Port 5432, Private IP)  │
-└─────────────────────────────────┘          └───────────────────────────┘          └───────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Workstation["Local Workstation"]
+        App["Local Server / Agent<br/>(port :8080 / :8081)"]
+        Proxy["AlloyDB Auth Proxy<br/>(localhost:5432)"]
+        App -->|"TCP Connection"| Proxy
+    end
+
+    subgraph IAM["Google Cloud IAM"]
+        Auth["OAuth2 / gcloud Auth<br/>(roles/alloydb.client)"]
+    end
+
+    subgraph VPC["Google Cloud Private VPC"]
+        Instance[("AlloyDB Primary Instance<br/>(Port 5432, Private IP)")]
+    end
+
+    Proxy -->|"Authenticates"| Auth
+    Proxy -->|"Encrypted mTLS Tunnel"| Instance
 ```
 
 ### Step 1: Install the AlloyDB Auth Proxy
